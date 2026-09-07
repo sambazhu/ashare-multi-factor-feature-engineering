@@ -19,7 +19,27 @@ import urllib.request
 import socketserver
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
-PORT = 8089
+
+def load_env_file():
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    if os.path.exists(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    if k.strip() not in os.environ:
+                        val = v.strip()
+                        if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                            val = val[1:-1]
+                        os.environ[k.strip()] = val
+
+load_env_file()
+
+PORT = int(os.getenv("ASHARE_PORT", "8089"))
+VIBE_HOST = os.getenv("VIBE_HOST", "http://127.0.0.1:8899").rstrip("/")
+VIBE_API_KEY = os.getenv("VIBE_API_KEY", "vibe123456")
+
 WEB_DIR = os.path.dirname(os.path.abspath(__file__))
 CACHE = {}
 CACHE_LOCK = threading.Lock()
@@ -144,14 +164,14 @@ class InMemoryGzipHTTPRequestHandler(SimpleHTTPRequestHandler):
             try:
                 content_len = int(self.headers.get("Content-Length", 0))
                 post_body = self.rfile.read(content_len) if content_len > 0 else b""
-                target_url = f"http://127.0.0.1:8899{path}"
+                target_url = f"{VIBE_HOST}{path}"
                 
                 req = urllib.request.Request(
                     target_url,
                     data=post_body,
                     headers={
                         "Content-Type": self.headers.get("Content-Type", "application/json"),
-                        "Authorization": self.headers.get("Authorization", "Bearer vibe123456"),
+                        "Authorization": self.headers.get("Authorization", f"Bearer {VIBE_API_KEY}"),
                     },
                     method="POST"
                 )

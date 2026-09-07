@@ -967,8 +967,8 @@ def register_sessions_routes(app: FastAPI) -> None:
 
         messages.append({"role": "user", "content": payload.message})
 
-        primary_base_url = "http://127.0.0.1:62202/0d574b39/sync/v1"
-        primary_model = "Qwen3.8-27B"
+        primary_base_url = os.getenv("PRIMARY_LLM_BASE_URL") or os.getenv("OPENAI_BASE_URL", "http://127.0.0.1:62202/0d574b39/sync/v1")
+        primary_model = os.getenv("PRIMARY_LLM_MODEL") or os.getenv("OPENAI_MODEL_NAME", "Qwen3.8-27B")
         primary_api_key = os.getenv("PRIMARY_LLM_API_KEY") or os.getenv("OPENAI_API_KEY", "")
 
         async def stream_generator():
