@@ -24,7 +24,20 @@ def load_env_file():
 
 load_env_file()
 
-IC_DIR = os.getenv("IC_DIR") or os.getenv("LD_LIBRARY_PATH") or "/opt/oracle/instantclient"
+def _resolve_ic_dir():
+    ic = os.getenv("IC_DIR")
+    if ic and os.path.exists(ic):
+        return ic
+    for p in os.getenv("LD_LIBRARY_PATH", "").split(":"):
+        p = p.strip()
+        if p and os.path.exists(p) and (os.path.exists(os.path.join(p, "libclntsh.so")) or "instantclient" in p):
+            return p
+    for p in ["/data1/wkzq/oracle/instantclient", "/opt/oracle/instantclient"]:
+        if os.path.exists(p):
+            return p
+    return None
+
+IC_DIR = _resolve_ic_dir()
 
 HOST = os.getenv("JYDB_HOST")
 PORT = int(os.getenv("JYDB_PORT", "1521"))

@@ -17,8 +17,8 @@ echo "============================================================" >> "${LOG_FI
 cd "${PROJECT_DIR}" || exit 1
 
 # ---- 1. 加载 Oracle Instant Client 环境变量 ----
-if [ -d "/opt/oracle/instantclient" ]; then
-    export LD_LIBRARY_PATH="/opt/oracle/instantclient:${LD_LIBRARY_PATH}"
+if [ -d "/data1/wkzq/oracle/instantclient" ]; then
+    export LD_LIBRARY_PATH="/data1/wkzq/oracle/instantclient:${LD_LIBRARY_PATH}"
 fi
 
 # ---- 2. 加载聚源连接凭据 ----
@@ -47,6 +47,19 @@ fi
 # ---- 4. 执行更新与 28 项回归验证流水线 ----
 "${PYTHON_BIN}" "${PROJECT_DIR}/daily_update.py" >> "${LOG_FILE}" 2>&1
 EXIT_CODE=$?
+
+# ---- 5. 自动同步数据至 125 演示与 AI 服务器 (121.14.52.125) ----
+if [ ${EXIT_CODE} -eq 0 ]; then
+    echo "[SYNC-125] 开始向 125 展示服务器同步最新数据切片与索引..." >> "${LOG_FILE}"
+    rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" "${PROJECT_DIR}/data/" wkzjapp@121.14.52.125:/home/wkzjapp/ashare-multi-factor-feature-engineering/data/ >> "${LOG_FILE}" 2>&1
+    SYNC_STATUS=$?
+    if [ ${SYNC_STATUS} -eq 0 ]; then
+        echo "[SYNC-125] ✅ 125 服务器数据同步大获成功!" >> "${LOG_FILE}"
+        ssh -o StrictHostKeyChecking=no wkzjapp@121.14.52.125 "touch /home/wkzjapp/ashare-multi-factor-feature-engineering/data/data_latest.json" 2>/dev/null || true
+    else
+        echo "[SYNC-125] ⚠️ 125 服务器数据同步出现警告 (退出码: ${SYNC_STATUS})" >> "${LOG_FILE}"
+    fi
+fi
 
 echo "Cron Job Finished with Exit Code ${EXIT_CODE} at $(date '+%Y-%m-%d %H:%M:%S')" >> "${LOG_FILE}"
 

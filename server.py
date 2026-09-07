@@ -142,6 +142,128 @@ def get_cached_file(rel_path):
         print(f"[ERROR] 读取并缓存文件失败 {full_path}: {e}")
         return None
 
+# K 线与分时数据短期内存缓存 (TTL 30s)
+KLINE_CACHE = {}
+KLINE_CACHE_LOCK = threading.Lock()
+KLINE_CACHE_TTL = 30
+
+
+def fetch_kline_data(code: str, period: str = "day", lmt: int = 500) -> dict:
+    code_clean = code.split(".")[0].strip()
+    if code_clean.startswith(("60", "68")):
+        market = "sh"
+    elif code_clean.startswith(("00", "30")):
+        market = "sz"
+    elif code_clean.startswith(("8", "4", "9")):
+        market = "bj"
+    else:
+        market = "sz"
+    symbol = f"{market}{code_clean}"
+
+    # 规范化 period: 1/min -> min, 101/day -> day, 102/week -> week
+    if period in {"1", "min"}:
+        norm_period = "min"
+    elif period in {"102", "week"}:
+        norm_period = "week"
+    else:
+        norm_period = "day"
+
+    cache_key = (symbol, norm_period, int(lmt))
+    now = time.time()
+    with KLINE_CACHE_LOCK:
+        if cache_key in KLINE_CACHE:
+            ts, data = KLINE_CACHE[cache_key]
+            if now - ts < KLINE_CACHE_TTL:
+                return data
+
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+    if norm_period == "min":
+        url = f"https://web.ifzq.gtimg.cn/appstock/app/minute/query?code={symbol}"
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                "Referer": "https://gu.qq.com/",
+            },
+        )
+        with opener.open(req, timeout=8) as resp:
+            raw = json.loads(resp.read().decode("utf-8"))
+        sub = raw.get("data", {}).get(symbol, {}).get("data", {})
+        date_str = sub.get("date", "")
+        minute_lines = sub.get("data", [])
+
+        pre_close = 0.0
+        qt_url = f"https://qt.gtimg.cn/q={symbol}"
+        try:
+            qt_req = urllib.request.Request(qt_url, headers={"User-Agent": "Mozilla/5.0"})
+            with opener.open(qt_req, timeout=3) as qt_resp:
+                qt_text = qt_resp.read().decode("gbk", errors="ignore")
+                parts = qt_text.split("~")
+                if len(parts) > 4 and parts[4]:
+                    pre_close = float(parts[4])
+        except Exception:
+            pass
+
+        parsed_trends = []
+        for line in minute_lines:
+            p = line.split(" ")
+            if len(p) >= 2:
+                t_str = f"{p[0][:2]}:{p[0][2:]}" if len(p[0]) == 4 else p[0]
+                price = float(p[1])
+                vol = float(p[2]) if len(p) > 2 else 0
+                amt = float(p[3]) if len(p) > 3 else 0
+                parsed_trends.append([t_str, price, vol, amt])
+
+        res = {
+            "symbol": symbol,
+            "code": code_clean,
+            "period": "min",
+            "date": date_str,
+            "preClose": pre_close,
+            "trends": parsed_trends,
+        }
+    else:
+        url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={symbol},{norm_period},,,{lmt},qfq"
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                "Referer": "https://gu.qq.com/",
+            },
+        )
+        with opener.open(req, timeout=8) as resp:
+            raw = json.loads(resp.read().decode("utf-8"))
+
+        sub = raw.get("data", {}).get(symbol, {})
+        k_key = f"qfq{norm_period}"
+        lines = sub.get(k_key, [])
+        if not lines:
+            lines = sub.get(norm_period, [])
+
+        parsed_klines = []
+        for item in lines:
+            if len(item) >= 6:
+                d = item[0]
+                o = float(item[1])
+                c = float(item[2])
+                h = float(item[3])
+                l = float(item[4])
+                v = float(item[5])
+                parsed_klines.append([d, o, c, h, l, v])
+
+        res = {
+            "symbol": symbol,
+            "code": code_clean,
+            "period": norm_period,
+            "klines": parsed_klines,
+        }
+
+    with KLINE_CACHE_LOCK:
+        KLINE_CACHE[cache_key] = (now, res)
+    return res
+
+
 class InMemoryGzipHTTPRequestHandler(SimpleHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -235,8 +357,41 @@ class InMemoryGzipHTTPRequestHandler(SimpleHTTPRequestHandler):
 
         self.send_error(404, f"Not Found: {path}")
 
+    def handle_kline_api(self):
+        query_str = self.path.split("?")[1] if "?" in self.path else ""
+        params = urllib.parse.parse_qs(query_str)
+        code = params.get("code", ["600519"])[0].strip()
+        klt = params.get("klt", ["101"])[0].strip()
+        try:
+            lmt = int(params.get("lmt", ["500"])[0])
+        except Exception:
+            lmt = 500
+
+        try:
+            data = fetch_kline_data(code, klt, lmt)
+            body = json.dumps(data, ensure_ascii=False).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            self.wfile.write(body)
+        except Exception as e:
+            err_body = json.dumps({"error": str(e)}, ensure_ascii=False).encode("utf-8")
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(err_body)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(err_body)
+
     def do_GET(self):
         path = self.path.split("?")[0]
+        if path == "/api/kline":
+            self.handle_kline_api()
+            return
+
         if path == "/":
             path = "/index.html"
             
@@ -363,6 +518,7 @@ def preload_latest_data():
         "vendor/tailwind.js",
         "vendor/lucide.js",
         "vendor/xlsx.full.min.js",
+        "vendor/echarts.min.js",
         "data/dates_index.json",
         "data/stock_200d_summary.json",
         "data/meta.json",

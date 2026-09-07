@@ -9,7 +9,7 @@
   <script src="vendor/tailwind.js"></script>
   <script src="vendor/lucide.js"></script>
   <script src="vendor/xlsx.full.min.js"></script>
-  <script>window.handleKlineIframeLoaded = function() { const el = document.getElementById('kline-loading'); if (el) el.classList.add('hidden'); };</script>
+  <script src="vendor/echarts.min.js"></script>
   <script>
     if (typeof tailwind !== 'undefined') {
       tailwind.config = {
@@ -637,31 +637,46 @@
     </div>
   </div>
 
-  <!-- Modal 3: Stock K-Line Chart Modal -->
+  <!-- Modal 3: Stock K-Line Chart Modal (Native ECharts + Full Quant MA System) -->
   <div id="kline-modal" class="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-sm hidden flex items-center justify-center p-2 sm:p-4" onclick="if(event.target===this) closeKlineModal()">
     <div class="bg-white dark:bg-[#0f172a] border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-6xl h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
       <!-- Modal Header -->
-      <div class="bg-slate-100 dark:bg-[#1e293b] px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center shrink-0">
+      <div class="bg-slate-100 dark:bg-[#1e293b] px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex flex-wrap gap-2 justify-between items-center shrink-0">
         <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded-lg bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
-            <i data-lucide="trending-up" class="w-4 h-4"></i>
+          <div class="w-8 h-8 rounded-lg bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold shrink-0">
+            <i data-lucide="candlestick-chart" class="w-4 h-4"></i>
           </div>
-          <h3 id="kline-modal-title" class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <span class="num-font text-blue-600 dark:text-blue-400 font-extrabold">600519</span>
-            <span>贵州茅台</span>
-            <span class="text-xs font-normal text-slate-500 dark:text-slate-400 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded-full">K 线行情</span>
-          </h3>
+          <div class="flex items-center flex-wrap gap-2">
+            <h3 id="kline-modal-title" class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span class="num-font text-blue-600 dark:text-blue-400 font-extrabold" id="kline-stock-code">600519</span>
+              <span id="kline-stock-name">贵州茅台</span>
+            </h3>
+            <div id="kline-price-box" class="flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800">
+              <span id="kline-latest-price" class="num-font font-bold text-slate-700 dark:text-slate-200">--</span>
+              <span id="kline-latest-pct" class="num-font font-bold text-slate-500">--</span>
+            </div>
+            <span class="hidden md:inline-block text-[11px] text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-800/60 px-2 py-0.5 rounded-full">前复权 · 近500日</span>
+          </div>
         </div>
+
+        <!-- 周期切换 Tabs -->
+        <div class="flex items-center bg-slate-200/80 dark:bg-slate-800/80 p-0.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-slate-700/60">
+          <button id="kline-tab-1" onclick="switchKlinePeriod('1')" class="px-2.5 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition">分时</button>
+          <button id="kline-tab-101" onclick="switchKlinePeriod('101')" class="px-2.5 py-1 rounded-md bg-white dark:bg-blue-600 text-blue-600 dark:text-white font-bold shadow-sm transition">日K</button>
+          <button id="kline-tab-102" onclick="switchKlinePeriod('102')" class="px-2.5 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition">周K</button>
+        </div>
+
+        <!-- 右侧操作栏 -->
         <div class="flex items-center gap-2">
           <button onclick="openVibeAiDrawerFromKline()" class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold transition shadow-sm" title="调用 Vibe-Trading AI 智能体生成深度研报">
             <i data-lucide="bot" class="w-3.5 h-3.5 text-amber-300"></i>
             <span>AI 研报</span>
           </button>
-          <a id="kline-external-link" href="#" target="_blank" class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition font-medium shadow-sm" title="在新标签页中独立打开该 K 线图">
+          <a id="kline-external-link" href="#" target="_blank" class="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition font-medium shadow-sm" title="在东方财富网页中独立打开该行情">
             <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-            <span class="hidden sm:inline">独立新窗口</span>
+            <span class="hidden sm:inline">东财行情</span>
           </a>
-          <button onclick="reloadKlineIframe()" class="p-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition shadow-sm" title="重新加载 K 线图">
+          <button onclick="reloadKlineData()" class="p-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition shadow-sm" title="重新拉取最新数据刷新图表">
             <i data-lucide="refresh-cw" class="w-4 h-4"></i>
           </button>
           <button onclick="closeKlineModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-800 transition" title="关闭 (Esc)">
@@ -669,15 +684,41 @@
           </button>
         </div>
       </div>
+
+      <!-- 均线与指标指示栏 -->
+      <div id="kline-legend-bar" class="bg-slate-50 dark:bg-[#131d31] px-4 py-1.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-[11px] overflow-x-auto shrink-0 select-none">
+        <div class="flex items-center gap-3 shrink-0">
+          <span class="text-slate-400 dark:text-slate-500 font-medium">量化均线组:</span>
+          <span class="flex items-center gap-1 font-semibold text-amber-500"><span class="w-2 h-0.5 bg-amber-400 inline-block"></span>MA5: <span id="leg-ma5" class="num-font font-mono font-bold">--</span></span>
+          <span class="flex items-center gap-1 font-semibold text-purple-500 dark:text-purple-400"><span class="w-2 h-0.5 bg-purple-400 inline-block"></span>MA10: <span id="leg-ma10" class="num-font font-mono font-bold">--</span></span>
+          <span class="flex items-center gap-1 font-semibold text-emerald-500"><span class="w-2 h-0.5 bg-emerald-400 inline-block"></span>MA20: <span id="leg-ma20" class="num-font font-mono font-bold">--</span></span>
+          <span class="flex items-center gap-1 font-semibold text-sky-500"><span class="w-2 h-0.5 bg-sky-400 inline-block"></span>MA60: <span id="leg-ma60" class="num-font font-mono font-bold">--</span></span>
+          <span class="flex items-center gap-1 font-semibold text-indigo-500 dark:text-indigo-400"><span class="w-2 h-0.5 bg-indigo-400 inline-block"></span>MA120: <span id="leg-ma120" class="num-font font-mono font-bold">--</span></span>
+          <span class="flex items-center gap-1 font-semibold text-orange-500 bg-orange-500/10 px-1 py-0.2 rounded" title="年线 (250日均线)"><span class="w-2 h-0.5 bg-orange-500 inline-block"></span>MA250年线: <span id="leg-ma250" class="num-font font-mono font-bold">--</span></span>
+          <span class="flex items-center gap-1 font-semibold text-pink-500 bg-pink-500/10 px-1 py-0.2 rounded" title="超长周期支撑线 (377日斐波那契均线)"><span class="w-2 h-0.5 bg-pink-500 inline-block"></span>MA377支撑: <span id="leg-ma377" class="num-font font-mono font-bold">--</span></span>
+        </div>
+        <div class="hidden sm:flex items-center gap-2 text-slate-400 text-[10px] shrink-0">
+          <span>滚轮缩放 · 拖拽平移</span>
+        </div>
+      </div>
       
-      <!-- Modal Body (Iframe + Loading state) -->
-      <div class="relative flex-1 w-full h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
+      <!-- Modal Body (ECharts Container + Loading state) -->
+      <div class="relative flex-1 w-full h-full bg-slate-50 dark:bg-[#0b1120] overflow-hidden">
         <div id="kline-loading" class="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm z-10">
           <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <span class="mt-3 text-xs font-semibold text-slate-600 dark:text-slate-300">正在载入专业 K 线行情系统...</span>
+          <span class="mt-3 text-xs font-semibold text-slate-600 dark:text-slate-300">正在拉取行情与计算量化指标...</span>
           <span id="kline-loading-url" class="mt-1 text-[10px] text-slate-400 font-mono max-w-md truncate"></span>
         </div>
-        <iframe id="kline-iframe" src="about:blank" class="w-full h-full border-0" allow="fullscreen" onload="handleKlineIframeLoaded()"></iframe>
+
+        <div id="kline-error" class="absolute inset-0 flex-col items-center justify-center bg-white/90 dark:bg-slate-950/90 backdrop-blur-sm z-10 hidden">
+          <i data-lucide="alert-circle" class="w-8 h-8 text-rose-500 mb-2"></i>
+          <span class="text-sm font-bold text-slate-700 dark:text-slate-200">数据拉取失败</span>
+          <span id="kline-error-msg" class="text-xs text-slate-500 mt-1 max-w-md text-center"></span>
+          <button onclick="reloadKlineData()" class="mt-3 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition shadow-sm">重新尝试</button>
+        </div>
+
+        <!-- ECharts 挂载 DOM 节点 -->
+        <div id="kline-echarts-container" class="w-full h-full"></div>
       </div>
     </div>
   </div>
@@ -2109,9 +2150,50 @@ async function showFactorDetail(code, name, dateStr) {
       document.getElementById('theme-icon').setAttribute('data-lucide', isDark ? 'sun' : 'moon');
       document.getElementById('theme-text').innerText = isDark ? '浅色' : '深色';
       if (window.lucide) lucide.createIcons();
+      if (klineChartInstance && klineRawData) {
+        renderEcharts(klineRawData);
+      }
     }
 
-    // K-Line modal helpers
+    // ============================================================
+    // Native Professional ECharts K-Line & Full Quant MA System
+    // ============================================================
+    let klineChartInstance = null;
+    let currentKlinePeriod = '101'; // '1': 分时, '101': 日K, '102': 周K
+    let klineRawData = null;
+
+    function calculateMA(dayCount, data) {
+      const result = [];
+      for (let i = 0, len = data.length; i < len; i++) {
+        if (i < dayCount - 1) {
+          result.push('-');
+          continue;
+        }
+        let sum = 0;
+        for (let j = 0; j < dayCount; j++) {
+          sum += data[i - j][1]; // close price
+        }
+        result.push(+(sum / dayCount).toFixed(2));
+      }
+      return result;
+    }
+
+    function calculateVolMA(dayCount, volumes) {
+      const result = [];
+      for (let i = 0, len = volumes.length; i < len; i++) {
+        if (i < dayCount - 1) {
+          result.push('-');
+          continue;
+        }
+        let sum = 0;
+        for (let j = 0; j < dayCount; j++) {
+          sum += volumes[i - j][1];
+        }
+        result.push(Math.round(sum / dayCount));
+      }
+      return result;
+    }
+
     function openKlineModal(code, name) {
       if (!code) return;
       currentKlineCode = code;
@@ -2120,51 +2202,489 @@ async function showFactorDetail(code, name, dateStr) {
       currentDetailName = name || '';
 
       const modal = document.getElementById('kline-modal');
-      const titleEl = document.getElementById('kline-modal-title');
+      const codeEl = document.getElementById('kline-stock-code');
+      const nameEl = document.getElementById('kline-stock-name');
       const extLink = document.getElementById('kline-external-link');
-      const loadingEl = document.getElementById('kline-loading');
-      const iframe = document.getElementById('kline-iframe');
+      const priceBox = document.getElementById('kline-price-box');
+      const latestPriceEl = document.getElementById('kline-latest-price');
+      const latestPctEl = document.getElementById('kline-latest-pct');
 
-      if (titleEl) {
-        titleEl.innerHTML = `
-          <span class="num-font text-blue-600 dark:text-blue-400 font-extrabold">${code}</span>
-          <span>${name || ''}</span>
-          <span class="text-xs font-normal text-slate-500 dark:text-slate-400 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded-full">K 线行情</span>
-        `;
+      if (codeEl) codeEl.innerText = code;
+      if (nameEl) nameEl.innerText = name || '';
+      if (latestPriceEl) latestPriceEl.innerText = '--';
+      if (latestPctEl) {
+        latestPctEl.innerText = '--';
+        latestPctEl.className = 'num-font font-bold text-slate-500';
       }
 
-      const host = window.location.hostname || '127.0.0.1';
-      const klineUrl = `http://${host}:8899/stock/${code}`;
-      if (extLink) extLink.href = klineUrl;
-      if (loadingEl) loadingEl.classList.remove('hidden');
+      const marketPrefix = (code.startsWith('60') || code.startsWith('68')) ? 'sh' : 'sz';
+      const eastmoneyUrl = `https://quote.eastmoney.com/concept/${marketPrefix}${code}.html`;
+      if (extLink) extLink.href = eastmoneyUrl;
 
-      if (iframe) {
-        iframe.src = klineUrl;
-      }
+      // 默认设置为日K
+      currentKlinePeriod = '101';
+      updateTabButtons();
 
       if (modal) modal.classList.remove('hidden');
+
+      // 初始化或调整尺寸
+      const container = document.getElementById('kline-echarts-container');
+      if (container) {
+        if (!klineChartInstance) {
+          klineChartInstance = echarts.init(container);
+          window.addEventListener('resize', () => {
+            if (klineChartInstance) klineChartInstance.resize();
+          });
+        }
+        setTimeout(() => {
+          if (klineChartInstance) klineChartInstance.resize();
+        }, 50);
+      }
+
+      if (window.lucide) lucide.createIcons();
+      loadAndRenderKline();
     }
 
     function closeKlineModal() {
       const modal = document.getElementById('kline-modal');
       if (modal) modal.classList.add('hidden');
-      const iframe = document.getElementById('kline-iframe');
-      if (iframe) iframe.src = 'about:blank';
     }
 
-    function handleKlineIframeLoaded() {
+    function switchKlinePeriod(period) {
+      if (currentKlinePeriod === period) return;
+      currentKlinePeriod = period;
+      updateTabButtons();
+      loadAndRenderKline();
+    }
+
+    function updateTabButtons() {
+      ['1', '101', '102'].forEach(p => {
+        const btn = document.getElementById(`kline-tab-${p}`);
+        if (!btn) return;
+        if (p === currentKlinePeriod) {
+          btn.className = 'px-2.5 py-1 rounded-md bg-white dark:bg-blue-600 text-blue-600 dark:text-white font-bold shadow-sm transition';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition';
+        }
+      });
+    }
+
+    function reloadKlineData() {
+      loadAndRenderKline(true);
+    }
+
+    async function loadAndRenderKline(force = false) {
+      if (!currentKlineCode) return;
       const loadingEl = document.getElementById('kline-loading');
+      const errorEl = document.getElementById('kline-error');
+      const urlText = document.getElementById('kline-loading-url');
+
       if (loadingEl) loadingEl.classList.remove('hidden');
+      if (errorEl) errorEl.classList.add('hidden');
+
+      const apiUrl = `/api/kline?code=${encodeURIComponent(currentKlineCode)}&klt=${currentKlinePeriod}&lmt=500${force ? `&_t=${Date.now()}` : ''}`;
+      if (urlText) urlText.innerText = apiUrl;
+
+      try {
+        const resp = await fetch(apiUrl);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const json = await resp.json();
+        klineRawData = json;
+        renderEcharts(json);
+        if (loadingEl) loadingEl.classList.add('hidden');
+      } catch (err) {
+        console.error('K线数据获取失败:', err);
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (errorEl) {
+          errorEl.classList.remove('hidden');
+          errorEl.classList.add('flex');
+          const msgEl = document.getElementById('kline-error-msg');
+          if (msgEl) msgEl.innerText = err.message || '网络或行情源暂时异常';
+        }
+      }
     }
 
-    function reloadKlineIframe() {
-      if (currentKlineCode) {
-        const loadingEl = document.getElementById('kline-loading');
-        if (loadingEl) loadingEl.classList.remove('hidden');
-        const iframe = document.getElementById('kline-iframe');
-        const host = window.location.hostname || '127.0.0.1';
-        if (iframe) iframe.src = `http://${host}:8899/stock/${currentKlineCode}?t=${Date.now()}`;
+    function renderEcharts(resJson) {
+      if (!klineChartInstance || !resJson) return;
+      const dataObj = resJson.data || resJson;
+
+      const isDark = document.documentElement.classList.contains('dark');
+      const axisColor = isDark ? '#334155' : '#cbd5e1';
+      const textColor = isDark ? '#94a3b8' : '#64748b';
+      const splitLineColor = isDark ? '#1e293b' : '#f1f5f9';
+      const legendBar = document.getElementById('kline-legend-bar');
+
+      const latestPriceEl = document.getElementById('kline-latest-price');
+      const latestPctEl = document.getElementById('kline-latest-pct');
+
+      if (currentKlinePeriod === '1') {
+        // 分时走势图
+        if (legendBar) legendBar.classList.add('hidden');
+        renderTrendsChart(dataObj, isDark, axisColor, textColor, splitLineColor, latestPriceEl, latestPctEl);
+      } else {
+        // K 线蜡烛图 (日K / 周K)
+        if (legendBar) legendBar.classList.remove('hidden');
+        renderCandleChart(dataObj, isDark, axisColor, textColor, splitLineColor, latestPriceEl, latestPctEl);
       }
+    }
+
+    function renderCandleChart(dataObj, isDark, axisColor, textColor, splitLineColor, latestPriceEl, latestPctEl) {
+      const rawKlines = dataObj.klines || [];
+      if (!rawKlines.length) return;
+
+      const dates = [];
+      const values = []; // [open, close, low, high, vol, amount, pct_chg]
+      const volumes = []; // [i, vol, 1|-1]
+
+      rawKlines.forEach((line, idx) => {
+        let d, open, close, high, low, vol, amount, pctChg;
+        if (Array.isArray(line)) {
+          d = line[0];
+          open = parseFloat(line[1]);
+          close = parseFloat(line[2]);
+          high = parseFloat(line[3]);
+          low = parseFloat(line[4]);
+          vol = parseFloat(line[5]);
+          amount = line.length > 6 ? parseFloat(line[6]) : vol * close * 100;
+          pctChg = idx > 0 ? ((close - values[idx - 1][1]) / values[idx - 1][1]) * 100 : 0;
+        } else if (typeof line === 'string') {
+          const parts = line.split(',');
+          d = parts[0];
+          open = parseFloat(parts[1]);
+          close = parseFloat(parts[2]);
+          high = parseFloat(parts[3]);
+          low = parseFloat(parts[4]);
+          vol = parseFloat(parts[5]);
+          amount = parseFloat(parts[6] || 0);
+          pctChg = parseFloat(parts[8] || 0);
+        } else {
+          return;
+        }
+        dates.push(d);
+        values.push([open, close, low, high, vol, amount, pctChg]);
+        volumes.push([idx, vol, close >= open ? 1 : -1]);
+      });
+
+      const ma5 = calculateMA(5, values);
+      const ma10 = calculateMA(10, values);
+      const ma20 = calculateMA(20, values);
+      const ma60 = calculateMA(60, values);
+      const ma120 = calculateMA(120, values);
+      const ma250 = calculateMA(250, values);
+      const ma377 = calculateMA(377, values);
+
+      const volMa5 = calculateVolMA(5, volumes);
+      const volMa10 = calculateVolMA(10, volumes);
+
+      // 更新最新报价徽章
+      const lastVal = values[values.length - 1];
+      if (lastVal && latestPriceEl && latestPctEl) {
+        const close = lastVal[1];
+        const pct = lastVal[6];
+        latestPriceEl.innerText = close.toFixed(2);
+        latestPctEl.innerText = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+        if (pct > 0) {
+          latestPriceEl.className = 'num-font font-bold text-rose-500';
+          latestPctEl.className = 'num-font font-bold text-rose-500';
+        } else if (pct < 0) {
+          latestPriceEl.className = 'num-font font-bold text-emerald-500';
+          latestPctEl.className = 'num-font font-bold text-emerald-500';
+        } else {
+          latestPriceEl.className = 'num-font font-bold text-slate-400';
+          latestPctEl.className = 'num-font font-bold text-slate-400';
+        }
+      }
+
+      // 更新均线指示数值
+      const lastIdx = values.length - 1;
+      const setLeg = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = (val !== undefined && val !== '-') ? Number(val).toFixed(2) : '--';
+      };
+      setLeg('leg-ma5', ma5[lastIdx]);
+      setLeg('leg-ma10', ma10[lastIdx]);
+      setLeg('leg-ma20', ma20[lastIdx]);
+      setLeg('leg-ma60', ma60[lastIdx]);
+      setLeg('leg-ma120', ma120[lastIdx]);
+      setLeg('leg-ma250', ma250[lastIdx]);
+      setLeg('leg-ma377', ma377[lastIdx]);
+
+      const option = {
+        animation: false,
+        backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'cross',
+            lineStyle: { color: isDark ? '#475569' : '#94a3b8', type: 'dashed' },
+            crossStyle: { color: isDark ? '#475569' : '#94a3b8' }
+          },
+          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.95)',
+          borderColor: isDark ? '#334155' : '#e2e8f0',
+          textStyle: { color: isDark ? '#e2e8f0' : '#1e293b' },
+          formatter: function (params) {
+            if (!params || !params.length) return '';
+            const idx = params[0].dataIndex;
+            const item = values[idx];
+            if (!item) return '';
+
+            const dateStr = dates[idx];
+            const open = item[0], close = item[1], low = item[2], high = item[3], vol = item[4], amt = item[5], pct = item[6];
+            const isUp = close >= open;
+            const colorHex = isUp ? '#ef4444' : '#10b981';
+
+            let h = `<div class="text-xs p-1 font-mono leading-snug min-w-[200px]">`;
+            h += `<div class="font-bold border-b border-slate-600/50 pb-1 mb-1.5 flex justify-between"><span>${dateStr}</span><span style="color:${colorHex}">${(pct>=0?'+':'')+pct.toFixed(2)}%</span></div>`;
+            h += `<div class="flex justify-between text-slate-400"><span>开盘:</span><span class="font-bold text-slate-200">${open.toFixed(2)}</span></div>`;
+            h += `<div class="flex justify-between text-slate-400"><span>最高:</span><span class="font-bold text-rose-400">${high.toFixed(2)}</span></div>`;
+            h += `<div class="flex justify-between text-slate-400"><span>最低:</span><span class="font-bold text-emerald-400">${low.toFixed(2)}</span></div>`;
+            h += `<div class="flex justify-between text-slate-400"><span>收盘:</span><span class="font-bold" style="color:${colorHex}">${close.toFixed(2)}</span></div>`;
+            h += `<div class="flex justify-between text-slate-400 border-t border-slate-700/50 pt-1 mt-1"><span>成交量:</span><span class="font-bold text-slate-200">${(vol / 10000).toFixed(2)} 万手</span></div>`;
+            h += `<div class="flex justify-between text-slate-400"><span>成交额:</span><span class="font-bold text-slate-200">${(amt / 100000000).toFixed(2)} 亿元</span></div>`;
+
+            // 均线信息
+            h += `<div class="border-t border-slate-700/50 pt-1 mt-1 grid grid-cols-2 gap-x-2 text-[10px]">`;
+            if (ma5[idx] !== '-') h += `<div style="color:#fbbf24">MA5: ${ma5[idx]}</div>`;
+            if (ma10[idx] !== '-') h += `<div style="color:#c084fc">MA10: ${ma10[idx]}</div>`;
+            if (ma20[idx] !== '-') h += `<div style="color:#4ade80">MA20: ${ma20[idx]}</div>`;
+            if (ma60[idx] !== '-') h += `<div style="color:#38bdf8">MA60: ${ma60[idx]}</div>`;
+            if (ma120[idx] !== '-') h += `<div style="color:#818cf8">MA120: ${ma120[idx]}</div>`;
+            if (ma250[idx] !== '-') h += `<div style="color:#fb923c" class="font-bold">年线: ${ma250[idx]}</div>`;
+            if (ma377[idx] !== '-') h += `<div style="color:#f472b6" class="font-bold col-span-2">MA377支撑: ${ma377[idx]}</div>`;
+            h += `</div></div>`;
+            return h;
+          }
+        },
+        axisPointer: {
+          link: [{ xAxisIndex: 'all' }]
+        },
+        grid: [
+          { left: '48px', right: '20px', top: '25px', height: '62%' },
+          { left: '48px', right: '20px', top: '71%', height: '18%' }
+        ],
+        xAxis: [
+          {
+            type: 'category',
+            data: dates,
+            boundaryGap: true,
+            axisLine: { lineStyle: { color: axisColor } },
+            axisLabel: { color: textColor, fontSize: 10 },
+            splitLine: { show: false },
+            min: 'dataMin',
+            max: 'dataMax'
+          },
+          {
+            type: 'category',
+            gridIndex: 1,
+            data: dates,
+            boundaryGap: true,
+            axisLine: { lineStyle: { color: axisColor } },
+            axisLabel: { show: false },
+            splitLine: { show: false },
+            min: 'dataMin',
+            max: 'dataMax'
+          }
+        ],
+        yAxis: [
+          {
+            scale: true,
+            axisLine: { lineStyle: { color: axisColor } },
+            axisLabel: { color: textColor, fontSize: 10 },
+            splitLine: { lineStyle: { color: splitLineColor, type: 'dashed' } }
+          },
+          {
+            scale: true,
+            gridIndex: 1,
+            splitNumber: 2,
+            axisLine: { lineStyle: { color: axisColor } },
+            axisLabel: {
+              color: textColor,
+              fontSize: 9,
+              formatter: val => (val / 10000).toFixed(0) + '万'
+            },
+            splitLine: { lineStyle: { color: splitLineColor, type: 'dashed' } }
+          }
+        ],
+        dataZoom: [
+          {
+            type: 'inside',
+            xAxisIndex: [0, 1],
+            start: Math.max(0, 100 - (120 / dates.length) * 100),
+            end: 100
+          },
+          {
+            show: true,
+            xAxisIndex: [0, 1],
+            type: 'slider',
+            top: '92%',
+            height: 18,
+            start: Math.max(0, 100 - (120 / dates.length) * 100),
+            end: 100,
+            borderColor: 'transparent',
+            backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+            fillerColor: isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.15)',
+            handleStyle: { color: '#3b82f6' },
+            textStyle: { color: textColor, fontSize: 9 }
+          }
+        ],
+        series: [
+          {
+            name: 'K线',
+            type: 'candlestick',
+            data: values.map(v => [v[0], v[1], v[2], v[3]]),
+            itemStyle: {
+              color: '#ef4444',
+              color0: '#10b981',
+              borderColor: '#ef4444',
+              borderColor0: '#10b981'
+            }
+          },
+          { name: 'MA5', type: 'line', data: ma5, smooth: true, showSymbol: false, lineStyle: { width: 1.2, color: '#fbbf24' } },
+          { name: 'MA10', type: 'line', data: ma10, smooth: true, showSymbol: false, lineStyle: { width: 1.2, color: '#c084fc' } },
+          { name: 'MA20', type: 'line', data: ma20, smooth: true, showSymbol: false, lineStyle: { width: 1.3, color: '#4ade80' } },
+          { name: 'MA60', type: 'line', data: ma60, smooth: true, showSymbol: false, lineStyle: { width: 1.4, color: '#38bdf8' } },
+          { name: 'MA120', type: 'line', data: ma120, smooth: true, showSymbol: false, lineStyle: { width: 1.5, color: '#818cf8' } },
+          { name: 'MA250', type: 'line', data: ma250, smooth: true, showSymbol: false, lineStyle: { width: 1.8, color: '#fb923c' } },
+          { name: 'MA377', type: 'line', data: ma377, smooth: true, showSymbol: false, lineStyle: { width: 2.0, color: '#f472b6', type: 'solid' } },
+          {
+            name: '成交量',
+            type: 'bar',
+            xAxisIndex: 1,
+            yAxisIndex: 1,
+            data: volumes.map(v => ({
+              value: v[1],
+              itemStyle: { color: v[2] > 0 ? '#ef4444' : '#10b981' }
+            }))
+          },
+          { name: 'VOL5', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: volMa5, smooth: true, showSymbol: false, lineStyle: { width: 1, color: '#fbbf24' } },
+          { name: 'VOL10', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: volMa10, smooth: true, showSymbol: false, lineStyle: { width: 1, color: '#c084fc' } }
+        ]
+      };
+
+      klineChartInstance.setOption(option, true);
+    }
+
+    function renderTrendsChart(dataObj, isDark, axisColor, textColor, splitLineColor, latestPriceEl, latestPctEl) {
+      const rawTrends = dataObj.trends || [];
+      const preClose = parseFloat(dataObj.preClose || 0);
+      if (!rawTrends.length) return;
+
+      const times = [];
+      const prices = [];
+      const avgPrices = [];
+      const volumes = [];
+
+      rawTrends.forEach(line => {
+        let t, p, avg, vol;
+        if (Array.isArray(line)) {
+          t = line[0];
+          p = parseFloat(line[1]);
+          vol = parseFloat(line[2] || 0);
+          avg = line.length > 3 ? parseFloat(line[3]) : p;
+        } else if (typeof line === 'string') {
+          const parts = line.split(/[,\s]+/);
+          t = parts[0].includes(':') ? parts[0] : (parts[0].length === 4 ? `${parts[0].slice(0, 2)}:${parts[0].slice(2)}` : parts[0]);
+          p = parseFloat(parts[1]);
+          vol = parseFloat(parts[2] || parts[5] || 0);
+          avg = parseFloat(parts[3] || parts[7] || parts[4] || p);
+        } else {
+          return;
+        }
+        times.push(t);
+        prices.push(p);
+        avgPrices.push(avg);
+        volumes.push(vol);
+      });
+
+      const lastP = prices[prices.length - 1];
+      if (lastP && preClose && latestPriceEl && latestPctEl) {
+        const pct = ((lastP - preClose) / preClose) * 100;
+        latestPriceEl.innerText = lastP.toFixed(2);
+        latestPctEl.innerText = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+        if (pct > 0) {
+          latestPriceEl.className = 'num-font font-bold text-rose-500';
+          latestPctEl.className = 'num-font font-bold text-rose-500';
+        } else if (pct < 0) {
+          latestPriceEl.className = 'num-font font-bold text-emerald-500';
+          latestPctEl.className = 'num-font font-bold text-emerald-500';
+        }
+      }
+
+      const option = {
+        animation: false,
+        backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'cross' },
+          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.95)',
+          borderColor: isDark ? '#334155' : '#e2e8f0',
+          textStyle: { color: isDark ? '#e2e8f0' : '#1e293b' },
+          formatter: function (params) {
+            if (!params || !params.length) return '';
+            const idx = params[0].dataIndex;
+            const t = times[idx];
+            const p = prices[idx];
+            const avg = avgPrices[idx];
+            const vol = volumes[idx];
+            const diff = p - preClose;
+            const pct = preClose ? (diff / preClose) * 100 : 0;
+            const isUp = diff >= 0;
+
+            let h = `<div class="text-xs p-1 font-mono leading-snug min-w-[180px]">`;
+            h += `<div class="font-bold border-b border-slate-600/50 pb-1 mb-1 flex justify-between"><span>${t}</span><span style="color:${isUp?'#ef4444':'#10b981'}">${(pct>=0?'+':'')+pct.toFixed(2)}%</span></div>`;
+            h += `<div class="flex justify-between text-slate-400"><span>价格:</span><span class="font-bold" style="color:${isUp?'#ef4444':'#10b981'}">${p.toFixed(2)}</span></div>`;
+            h += `<div class="flex justify-between text-slate-400"><span>均价:</span><span class="font-bold text-amber-400">${avg ? avg.toFixed(2) : '--'}</span></div>`;
+            h += `<div class="flex justify-between text-slate-400 border-t border-slate-700/50 pt-1 mt-1"><span>成交量:</span><span class="font-bold text-slate-200">${vol} 手</span></div>`;
+            h += `</div>`;
+            return h;
+          }
+        },
+        axisPointer: { link: [{ xAxisIndex: 'all' }] },
+        grid: [
+          { left: '48px', right: '20px', top: '25px', height: '62%' },
+          { left: '48px', right: '20px', top: '71%', height: '18%' }
+        ],
+        xAxis: [
+          { type: 'category', data: times, boundaryGap: false, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor, fontSize: 10 } },
+          { type: 'category', gridIndex: 1, data: times, boundaryGap: false, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { show: false } }
+        ],
+        yAxis: [
+          { scale: true, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor, fontSize: 10 }, splitLine: { lineStyle: { color: splitLineColor, type: 'dashed' } } },
+          { scale: true, gridIndex: 1, splitNumber: 2, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor, fontSize: 9 }, splitLine: { lineStyle: { color: splitLineColor, type: 'dashed' } } }
+        ],
+        series: [
+          {
+            name: '分时价格',
+            type: 'line',
+            data: prices,
+            showSymbol: false,
+            lineStyle: { width: 1.5, color: '#38bdf8' },
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(56, 189, 248, 0.35)' },
+                { offset: 1, color: 'rgba(56, 189, 248, 0.02)' }
+              ])
+            }
+          },
+          { name: '均价', type: 'line', data: avgPrices, showSymbol: false, lineStyle: { width: 1.2, color: '#fbbf24' } },
+          {
+            name: '分时成交量',
+            type: 'bar',
+            xAxisIndex: 1,
+            yAxisIndex: 1,
+            data: volumes.map((v, i) => {
+              const cur = prices[i];
+              const prev = i > 0 ? prices[i - 1] : preClose;
+              return {
+                value: v,
+                itemStyle: { color: cur >= prev ? '#ef4444' : '#10b981' }
+              };
+            })
+          }
+        ]
+      };
+
+      klineChartInstance.setOption(option, true);
     }
 
 
@@ -3018,6 +3538,15 @@ async function showFactorDetail(code, name, dateStr) {
       const name = currentDetailName || currentKlineName;
       if (code) {
         openVibeAiDrawer(code, name, activeDates[0]);
+      }
+    }
+
+    function openKlineFromFactorDetail() {
+      const code = currentDetailCode || currentKlineCode;
+      const name = currentDetailName || currentKlineName;
+      if (code) {
+        closeModal('factor-detail-modal');
+        openKlineModal(code, name);
       }
     }
 
