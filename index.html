@@ -1,0 +1,3480 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Ashare Vibe AI - A 股量化选股与多因子智能体系统</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="vendor/tailwind.js"></script>
+  <script src="vendor/lucide.js"></script>
+  <script src="vendor/xlsx.full.min.js"></script>
+  <script>window.handleKlineIframeLoaded = function() { const el = document.getElementById('kline-loading'); if (el) el.classList.add('hidden'); };</script>
+  <script>
+    if (typeof tailwind !== 'undefined') {
+      tailwind.config = {
+        darkMode: 'class',
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    
+    html.light {
+      --bg-main: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-header: #e2e8f0;
+      --text-main: #0f172a;
+      --border-color: #cbd5e1;
+    }
+    
+    html.light body { background-color: #f8fafc; color: #0f172a; }
+    html.light ::-webkit-scrollbar-track { background: #e2e8f0; }
+    html.light ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+
+    /* Sticky columns */
+    .sticky-col-1 { position: sticky; left: 0px; z-index: 20; width: 80px; min-width: 80px; max-width: 80px; }
+    .sticky-col-2 { position: sticky; left: 80px; z-index: 20; width: 95px; min-width: 95px; max-width: 95px; }
+
+    html.light thead .sticky-col-1, html.light thead .sticky-col-2 { background-color: #e2e8f0; z-index: 35; }
+    html.dark thead .sticky-col-1, html.dark thead .sticky-col-2 { background-color: #0d131f; z-index: 35; }
+
+    html.light tr:nth-child(even) .sticky-col-1, html.light tr:nth-child(even) .sticky-col-2 { background-color: #ffffff; }
+    html.light tr:nth-child(odd) .sticky-col-1, html.light tr:nth-child(odd) .sticky-col-2 { background-color: #f8fafc; }
+    html.light tr:hover .sticky-col-1, html.light tr:hover .sticky-col-2 { background-color: #e0f2fe; }
+
+    html.dark tr:nth-child(even) .sticky-col-1, html.dark tr:nth-child(even) .sticky-col-2 { background-color: #0b0f17; }
+    html.dark tr:nth-child(odd) .sticky-col-1, html.dark tr:nth-child(odd) .sticky-col-2 { background-color: #090d14; }
+    html.dark tr:hover .sticky-col-1, html.dark tr:hover .sticky-col-2 { background-color: #172338; }
+
+    html.light .zebra-row:nth-child(even) { background-color: #ffffff; }
+    html.light .zebra-row:nth-child(odd) { background-color: #f8fafc; }
+    html.light .zebra-row:hover { background-color: #e0f2fe; }
+
+    html.dark .zebra-row:nth-child(even) { background-color: #0b0f17; }
+    html.dark .zebra-row:nth-child(odd) { background-color: #090d14; }
+    html.dark .zebra-row:hover { background-color: #172338; }
+
+    /* 9 Strategy Factor Badge Styles */
+    .badge-hl5r { background: linear-gradient(135deg, #059669 0%, #d97706 100%); color: #fff; font-weight: 800; border: 1px solid #10b981; cursor: pointer; }
+    .badge-5r { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #fff; font-weight: 800; border: 1px solid #ef4444; cursor: pointer; }
+    .badge-high-all { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); color: #fff; font-weight: 800; border: 1px solid #fbbf24; box-shadow: 0 1px 4px rgba(245, 158, 11, 0.4); cursor: pointer; }
+    .badge-high-500 { background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); color: #fff; font-weight: 800; border: 1px solid #f97316; cursor: pointer; }
+    .badge-high-250 { background: linear-gradient(135deg, #f97316 0%, #fb923c 100%); color: #fff; font-weight: 800; border: 1px solid #fdba74; cursor: pointer; }
+    .badge-hlamo { background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); color: #fff; font-weight: 800; border: 1px solid #8b5cf6; cursor: pointer; }
+    .badge-amo { background: linear-gradient(135deg, #ea580c 0%, #d97706 100%); color: #fff; font-weight: 800; border: 1px solid #f97316; cursor: pointer; }
+    .badge-ma377 { background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #fff; font-weight: 800; border: 1px solid #38bdf8; cursor: pointer; }
+    .badge-ma250 { background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); color: #fff; font-weight: 800; border: 1px solid #22d3ee; cursor: pointer; }
+    .badge-ma { background: linear-gradient(135deg, #0d9488 0%, #059669 100%); color: #fff; font-weight: 800; border: 1px solid #14b8a6; cursor: pointer; }
+
+    .cal-tag-normal { color: #94a3b8; font-weight: 500; }
+    .num-font { font-family: 'JetBrains Mono', 'Courier New', monospace; }
+
+    /* 防滚动抖动与虚拟滚动行高精确固化 */
+    #table-container {
+      overflow-anchor: none !important;
+      scroll-behavior: auto !important;
+    }
+    tr.zebra-row {
+      height: 57px !important;
+      max-height: 57px !important;
+      box-sizing: border-box !important;
+    }
+    tr.zebra-row td {
+      height: 57px !important;
+      max-height: 57px !important;
+      padding-top: 4px !important;
+      padding-bottom: 4px !important;
+      box-sizing: border-box !important;
+      vertical-align: middle !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-[#070a0f] text-slate-900 dark:text-slate-200 font-sans text-xs antialiased h-screen flex flex-col overflow-hidden transition-colors duration-200">
+
+  <!-- Top Accent Bar -->
+  <header class="h-1 bg-gradient-to-r from-emerald-500 via-amber-500 to-indigo-600 w-full shrink-0"></header>
+
+  <!-- Header Navigation & Strategy Overview -->
+  <div class="bg-white dark:bg-[#0b1019] border-b border-slate-200 dark:border-slate-800/80 px-4 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-lg text-white shadow-md">
+        <i data-lucide="sparkles" class="w-5 h-5 text-amber-300"></i>
+      </div>
+      <div>
+        <h1 class="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <span class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent font-extrabold tracking-wide">Ashare Vibe AI</span>
+          <span class="px-2 py-0.5 rounded text-[10px] bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-semibold">A 股多因子特征工程与金融智能体系统</span>
+        </h1>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap">
+          <span class="flex items-center gap-1.5">
+            <span class="font-bold text-slate-700 dark:text-slate-300">基准交易日:</span>
+            <select id="select-base-date" onchange="changeBaseTradingDay(this.value)" class="bg-white dark:bg-[#121927] border border-blue-500/50 text-blue-700 dark:text-blue-400 font-extrabold num-font text-xs rounded py-0.5 px-2 cursor-pointer shadow-sm hover:border-blue-600 transition" title="选择切换近 90 交易日任意基准日">
+              <option value="">加载中...</option>
+            </select>
+            <span id="stat-latest-date" class="hidden">--</span>
+          </span>
+          <span>•</span>
+          <span>复权口径: <strong class="text-emerald-600 dark:text-emerald-400 font-semibold">CS_StockAdjPerformance 前复权精确 (METHOD=1, STD=1)</strong></span>
+          <span>•</span>
+          <span>覆盖期: <strong id="stat-coverage-period" class="text-slate-600 dark:text-slate-300 font-semibold">--</strong></span>
+          <span id="preload-status-badge" class="ml-1 text-[10px] px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-medium hidden">⚡ 90日切片就绪</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Controls & All 9 Strategy Stat Badges -->
+    <div class="flex items-center gap-1.5 text-xs overflow-x-auto">
+      <div class="bg-slate-100 dark:bg-[#121927] border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-1 text-center">
+        <div class="text-[10px] text-slate-500">全市场A股</div>
+        <div id="stat-total" class="font-bold text-slate-900 dark:text-slate-100 text-xs num-font">--</div>
+      </div>
+      <div class="bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-300 dark:border-emerald-500/40 rounded-lg px-2 py-1 text-center cursor-pointer hover:bg-emerald-100" onclick="setQuickFilter('label1')">
+        <div class="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">均线多头</div>
+        <div id="stat-label1" class="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs num-font">--</div>
+      </div>
+      <div class="bg-amber-50 dark:bg-amber-500/5 border border-amber-300 dark:border-amber-500/40 rounded-lg px-2 py-1 text-center cursor-pointer hover:bg-amber-100" onclick="setQuickFilter('hl_5r')">
+        <div class="text-[10px] text-amber-800 dark:text-amber-400 font-semibold">HL+5R 底部五阳</div>
+        <div id="stat-hl5r" class="font-extrabold text-amber-700 dark:text-amber-400 text-xs num-font">--</div>
+      </div>
+      <div class="bg-red-50 dark:bg-red-500/5 border border-red-300 dark:border-red-500/40 rounded-lg px-2 py-1 text-center cursor-pointer hover:bg-red-100" onclick="setQuickFilter('f_5r')">
+        <div class="text-[10px] text-red-700 dark:text-red-400 font-semibold">5R 连红</div>
+        <div id="stat-5r" class="font-extrabold text-red-600 dark:text-red-400 text-xs num-font">--</div>
+      </div>
+      <div id="badge-high-all" class="bg-yellow-50 dark:bg-yellow-500/5 border border-yellow-300 dark:border-yellow-500/40 rounded-lg px-2 py-1 text-center cursor-pointer hover:bg-yellow-100" onclick="setQuickFilter('high_all')" title="突破数据覆盖期所有前序最高价且上市>500日">
+        <div class="text-[10px] text-yellow-800 dark:text-yellow-400 font-semibold">👑 覆盖期新高</div>
+        <div id="stat-high-all" class="font-extrabold text-yellow-700 dark:text-yellow-400 text-xs num-font">--</div>
+      </div>
+      <div class="bg-orange-50 dark:bg-orange-500/5 border border-orange-300 dark:border-orange-500/40 rounded-lg px-2 py-1 text-center cursor-pointer hover:bg-orange-100" onclick="setQuickFilter('high_500')">
+        <div class="text-[10px] text-orange-800 dark:text-orange-400 font-semibold">🔥 500日新高</div>
+        <div id="stat-high-500" class="font-extrabold text-orange-700 dark:text-orange-400 text-xs num-font">--</div>
+      </div>
+      <div class="bg-amber-50 dark:bg-amber-500/5 border border-amber-300 dark:border-amber-500/40 rounded-lg px-2 py-1 text-center cursor-pointer hover:bg-amber-100" onclick="setQuickFilter('high_250')">
+        <div class="text-[10px] text-amber-800 dark:text-amber-400 font-semibold">⚡ 250日新高</div>
+        <div id="stat-high-250" class="font-extrabold text-amber-700 dark:text-amber-400 text-xs num-font">--</div>
+      </div>
+      <div class="bg-purple-50 dark:bg-purple-500/5 border border-purple-300 dark:border-purple-500/40 rounded-lg px-2 py-1 text-center cursor-pointer hover:bg-purple-100" onclick="setQuickFilter('hl_amo')">
+        <div class="text-[10px] text-purple-700 dark:text-purple-400 font-semibold">💎 HL+AMO 低位放量</div>
+        <div id="stat-hlamo" class="font-extrabold text-purple-600 dark:text-purple-400 text-xs num-font">--</div>
+      </div>
+      <div class="bg-orange-50 dark:bg-orange-500/5 border border-orange-300 dark:border-orange-500/40 rounded-lg px-2 py-1 text-center cursor-pointer hover:bg-orange-100" onclick="setQuickFilter('f_amo')">
+        <div class="text-[10px] text-orange-700 dark:text-orange-400 font-semibold">⚡ AMO 放量</div>
+        <div id="stat-amo" class="font-extrabold text-orange-600 dark:text-orange-400 text-xs num-font">--</div>
+      </div>
+      <div class="bg-sky-50 dark:bg-sky-500/5 border border-sky-300 dark:border-sky-500/40 rounded-lg px-2 py-1 text-center cursor-pointer hover:bg-sky-100" onclick="setQuickFilter('ma377')">
+        <div class="text-[10px] text-sky-800 dark:text-sky-400 font-semibold">🛡️ MA377支撑</div>
+        <div id="stat-ma377" class="font-extrabold text-sky-700 dark:text-sky-400 text-xs num-font">--</div>
+      </div>
+      <div class="bg-cyan-50 dark:bg-cyan-500/5 border border-cyan-300 dark:border-cyan-500/40 rounded-lg px-2 py-1 text-center cursor-pointer hover:bg-cyan-100" onclick="setQuickFilter('ma250')">
+        <div class="text-[10px] text-cyan-800 dark:text-cyan-400 font-semibold">🛡️ MA250支撑</div>
+        <div id="stat-ma250" class="font-extrabold text-cyan-700 dark:text-cyan-400 text-xs num-font">--</div>
+      </div>
+
+      <button onclick="toggleTheme()" class="ml-1 flex items-center gap-1 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 px-2.5 py-1.5 rounded-lg transition border border-slate-300 dark:border-slate-700 font-medium">
+        <i id="theme-icon" data-lucide="sun" class="w-3.5 h-3.5 text-amber-500"></i>
+        <span id="theme-text">浅色</span>
+      </button>
+
+      <a href="industry_graph.html" class="flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 px-2.5 py-1.5 rounded-lg transition border border-emerald-200 dark:border-emerald-700/60 font-medium shadow-sm">
+        <i data-lucide="network" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"></i>
+        <span>产业链图谱</span>
+      </a>
+
+      <button onclick="openModal('dict-modal')" class="flex items-center gap-1 bg-blue-50 hover:bg-blue-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-blue-700 dark:text-slate-200 px-2.5 py-1.5 rounded-lg transition border border-blue-200 dark:border-slate-700 font-medium">
+        <i data-lucide="book-open" class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"></i>
+        <span>因子字典</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Custom Industry Group Toolbar -->
+  <div class="bg-indigo-50/50 dark:bg-[#0c121e] border-b border-slate-200 dark:border-slate-800/80 px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 shrink-0">
+    <div class="flex items-center gap-1.5 overflow-x-auto" id="custom-group-tabs-container">
+      <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 shrink-0 mr-1">
+        <i data-lucide="layers" class="w-3.5 h-3.5 text-indigo-600"></i> 产业大类:
+      </span>
+      <button id="tab-cgrp-all" onclick="selectCustomGroupTab('all')" class="px-2.5 py-0.5 rounded-md border border-indigo-500/60 bg-indigo-600 text-white font-bold text-xs shadow-sm transition">
+        全部大类
+      </button>
+      <!-- Dynamic group tabs inserted by JS -->
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="openCustomIndustryModal()" class="flex items-center gap-1.5 bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-slate-700 font-bold text-xs transition shadow-sm">
+        <i data-lucide="folder-cog" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400"></i>
+        <span>自定义行业分类 & Excel 导入导出</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Strategy Factor Toolbar -->
+  <div class="bg-slate-100 dark:bg-[#0e1420] border-b border-slate-200 dark:border-slate-800/80 px-4 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-sm">
+    <div class="flex flex-wrap items-center gap-1.5">
+      <!-- Calendar Range Select Buttons -->
+      <span class="text-xs font-bold text-slate-700 dark:text-slate-300 mr-1 flex items-center gap-1">
+        <i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-600"></i> 跨度:
+      </span>
+      <button id="btn-span-10" onclick="setCalendarSpan(10)" class="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold hover:bg-slate-200 transition">10天</button>
+      <button id="btn-span-15" onclick="setCalendarSpan(15)" class="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold hover:bg-slate-200 transition">15天</button>
+      <button id="btn-span-30" onclick="setCalendarSpan(30)" class="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold hover:bg-slate-200 transition">30天</button>
+      <button id="btn-span-60" onclick="setCalendarSpan(60)" class="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold hover:bg-slate-200 transition">60天</button>
+      <button id="btn-span-90" onclick="setCalendarSpan(90)" class="px-2 py-0.5 rounded border border-blue-500/60 bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold hover:bg-blue-500/20 transition shadow-sm">90天(默认)</button>
+
+      <!-- 90天横向矩阵快捷导航控制器 -->
+      <div class="inline-flex items-center gap-1 ml-1 text-slate-500 text-xs">
+        <button onclick="scrollTableDates(15)" class="px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold transition flex items-center gap-0.5" title="向右滚动查看更早历史 (15天)">◀ 前推15天</button>
+        <button onclick="scrollTableDates(-15)" class="px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold transition flex items-center gap-0.5" title="向左滚动查看更近日期 (15天)">后移15天 ▶</button>
+        <button onclick="scrollTableDatesToEdge('latest')" class="px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-medium transition" title="跳转至最新交易日">最新日</button>
+        <button onclick="scrollTableDatesToEdge('oldest')" class="px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-medium transition" title="跳转至第90天(4月)">第90天</button>
+      </div>
+
+      <div class="h-4 w-px bg-slate-300 dark:bg-slate-800 mx-1"></div>
+
+      <!-- Quick Strategy Filter Buttons for 9 Factors -->
+      <button id="btn-filter-all" onclick="setQuickFilter('all')" class="px-2 py-0.5 rounded-lg border border-blue-500/50 bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold hover:bg-blue-500/20 transition">
+        全部标的
+      </button>
+      <button id="btn-filter-hl_5r" onclick="setQuickFilter('hl_5r')" class="px-2 py-0.5 rounded-lg border border-amber-500/60 bg-amber-500/10 text-amber-800 dark:text-amber-300 font-bold hover:bg-amber-500/20 transition">
+        ⭐ HL+5R
+      </button>
+      <button id="btn-filter-f_5r" onclick="setQuickFilter('f_5r')" class="px-2 py-0.5 rounded-lg border border-red-500/60 bg-red-500/10 text-red-700 dark:text-red-300 font-bold hover:bg-red-500/20 transition">
+        🔴 5R
+      </button>
+      <button id="btn-filter-high_all" onclick="setQuickFilter('high_all')" class="px-2 py-0.5 rounded-lg border border-yellow-500/60 bg-yellow-500/10 text-yellow-800 dark:text-yellow-300 font-bold hover:bg-yellow-500/20 transition">
+        👑 覆盖期新高
+      </button>
+      <button id="btn-filter-high_500" onclick="setQuickFilter('high_500')" class="px-2 py-0.5 rounded-lg border border-orange-500/60 bg-orange-500/10 text-orange-800 dark:text-orange-300 font-bold hover:bg-orange-500/20 transition">
+        🔥 500日新高
+      </button>
+      <button id="btn-filter-high_250" onclick="setQuickFilter('high_250')" class="px-2 py-0.5 rounded-lg border border-amber-500/60 bg-amber-500/10 text-amber-800 dark:text-amber-300 font-bold hover:bg-amber-500/20 transition">
+        ⚡ 250日新高
+      </button>
+      <button id="btn-filter-hl_amo" onclick="setQuickFilter('hl_amo')" class="px-2 py-0.5 rounded-lg border border-purple-500/60 bg-purple-500/10 text-purple-700 dark:text-purple-300 font-bold hover:bg-purple-500/20 transition">
+        💎 HL+AMO
+      </button>
+      <button id="btn-filter-f_amo" onclick="setQuickFilter('f_amo')" class="px-2 py-0.5 rounded-lg border border-orange-500/60 bg-orange-500/10 text-orange-700 dark:text-orange-300 font-bold hover:bg-orange-500/20 transition">
+        ⚡ AMO
+      </button>
+      <button id="btn-filter-ma377" onclick="setQuickFilter('ma377')" class="px-2 py-0.5 rounded-lg border border-sky-500/60 bg-sky-500/10 text-sky-800 dark:text-sky-300 font-bold hover:bg-sky-500/20 transition">
+        🛡️ MA377支撑
+      </button>
+      <button id="btn-filter-ma250" onclick="setQuickFilter('ma250')" class="px-2 py-0.5 rounded-lg border border-cyan-500/60 bg-cyan-500/10 text-cyan-800 dark:text-cyan-300 font-bold hover:bg-cyan-500/20 transition">
+        🛡️ MA250支撑
+      </button>
+      <button id="btn-filter-label1" onclick="setQuickFilter('label1')" class="px-2 py-0.5 rounded-lg border border-emerald-500/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold hover:bg-emerald-500/20 transition">
+        📈 均线多头
+      </button>
+    </div>
+
+    <!-- ShenWan 1/2/3 Cascading Industry Filters & Search -->
+    <div class="flex items-center gap-2">
+      <!-- Custom Group Cascading Select -->
+      <div class="flex items-center gap-1 text-slate-600 dark:text-slate-400 font-medium">
+        <span class="text-indigo-600 dark:text-indigo-400 font-bold">产业大类:</span>
+        <select id="select-custom-group" onchange="onCustomGroupChange()" class="bg-white dark:bg-[#121927] border border-indigo-300 dark:border-indigo-700 text-indigo-900 dark:text-indigo-200 font-bold text-xs rounded-lg py-1 px-1.5 max-w-[110px]">
+          <option value="all">全产业大类</option>
+        </select>
+      </div>
+
+      <!-- ShenWan Level 1 -->
+      <div class="flex items-center gap-1 text-slate-600 dark:text-slate-400 font-medium">
+        <span>申万1级:</span>
+        <select id="select-sw-ind1" onchange="onSw1Change()" class="bg-white dark:bg-[#121927] border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg py-1 px-1.5 max-w-[100px]">
+          <option value="all">全1级</option>
+        </select>
+      </div>
+
+      <!-- ShenWan Level 2 -->
+      <div class="flex items-center gap-1 text-slate-600 dark:text-slate-400 font-medium">
+        <span>2级:</span>
+        <select id="select-sw-ind2" onchange="onSw2Change()" class="bg-white dark:bg-[#121927] border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg py-1 px-1.5 max-w-[100px]">
+          <option value="all">全2级</option>
+        </select>
+      </div>
+
+      <!-- ShenWan Level 3 -->
+      <div class="flex items-center gap-1 text-slate-600 dark:text-slate-400 font-medium">
+        <span class="text-blue-600 dark:text-blue-400 font-bold">3级:</span>
+        <select id="select-sw-ind3" onchange="onSw3Change()" class="bg-white dark:bg-[#121927] border border-blue-400 dark:border-blue-500/50 text-slate-900 dark:text-slate-100 font-semibold text-xs rounded-lg py-1 px-1.5 max-w-[120px]">
+          <option value="all">全3级行业</option>
+        </select>
+      </div>
+
+      <!-- Board Dropdown -->
+      <select id="select-board" onchange="applyFilters()" class="bg-white dark:bg-[#121927] border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg py-1 px-1.5">
+        <option value="all">全板块</option>
+        <option value="main_sh">沪市主板 (60)</option>
+        <option value="main_sz">深市主板 (00)</option>
+        <option value="cyb">创业板 (30)</option>
+        <option value="kcb">科创板 (68)</option>
+      </select>
+
+      <!-- Search Input -->
+      <div class="relative">
+        <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400"></i>
+        <input id="search-input" type="text" oninput="applyFilters()" placeholder="代码/简称/1·2·3级行业..." class="bg-white dark:bg-[#121927] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 text-xs rounded-lg pl-8 pr-3 py-1.5 w-44 focus:outline-none focus:border-blue-500"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Table Container: Stock + ShenWan 1/2/3 + 9 Factors Badge + Calendar Matrix -->
+  <main class="flex-grow overflow-auto relative bg-slate-50 dark:bg-[#070a0f]" id="table-container">
+    <table id="main-stock-table" class="border-collapse text-left text-xs whitespace-nowrap" style="table-layout: fixed; width: max-content;">
+      <thead class="sticky top-0 z-30 bg-slate-200 dark:bg-[#0d131f] text-slate-800 dark:text-slate-200 font-bold border-b border-slate-300 dark:border-slate-800 shadow-sm">
+        <tr id="table-header-row" class="divide-x divide-slate-300 dark:divide-slate-800/80">
+          <th class="py-2.5 px-2 sticky-col-1 cursor-pointer hover:text-blue-600 w-[80px] min-w-[80px] max-w-[80px]" onclick="sortBy('code')">
+            <div class="flex items-center justify-between">代码 <i data-lucide="arrow-up-down" class="w-3 h-3 text-slate-400"></i></div>
+          </th>
+          <th class="py-2.5 px-2 sticky-col-2 cursor-pointer hover:text-blue-600 w-[95px] min-w-[95px] max-w-[95px]" onclick="sortBy('name')">
+            <div class="flex items-center justify-between">证券简称 <i data-lucide="arrow-up-down" class="w-3 h-3 text-slate-400"></i></div>
+          </th>
+          <th class="py-2.5 px-2 cursor-pointer hover:text-blue-600 w-[260px] min-w-[260px] max-w-[260px]" onclick="sortBy('sw_ind1')">
+            申万行业 (1级 / 2级 / 3级)
+          </th>
+          <th class="py-2.5 px-2 text-right cursor-pointer hover:text-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300 w-[85px] min-w-[85px] max-w-[85px]" onclick="sortBy('adj_close')">
+            <div class="flex items-center justify-end gap-1">复权收盘(主) <i data-lucide="arrow-up-down" class="w-3 h-3 text-emerald-500"></i></div>
+          </th>
+          <th class="py-2.5 px-2 text-right cursor-pointer hover:text-blue-600 text-slate-600 dark:text-slate-400 w-[75px] min-w-[75px] max-w-[75px]" onclick="sortBy('raw_close')">
+            原始收盘
+          </th>
+          <th class="py-2.5 px-2 text-center w-[160px] min-w-[160px] max-w-[160px]">
+            最新命中策略因子 (9大因子)
+          </th>
+          <th class="py-2.5 px-2 text-center cursor-pointer hover:text-amber-600 bg-amber-100/50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-300 w-[80px] min-w-[80px] max-w-[80px]" onclick="sortBy('streak')">
+            <div class="flex items-center justify-center gap-1">连续多头 <i data-lucide="flame" class="w-3.5 h-3.5 text-amber-600"></i></div>
+          </th>
+        </tr>
+      </thead>
+      <tbody id="table-body" class="divide-y divide-slate-300 dark:divide-slate-800/60">
+        <!-- Rendered Rows -->
+      </tbody>
+    </table>
+  </main>
+
+  <!-- Footer Navigation & Pagination -->
+  <footer class="bg-white dark:bg-[#0b1019] border-t border-slate-200 dark:border-slate-800 px-4 py-2 flex flex-wrap justify-between items-center text-slate-600 dark:text-slate-400 text-xs shrink-0 shadow-inner">
+    <div class="flex items-center gap-4">
+      <span class="flex items-center gap-1.5 font-medium">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>模式: 全量 9 大核心策略因子全景矩阵 (点时无未来复权 + 申万 1/2/3 级行业联动)</span>
+      </span>
+      <span>|</span>
+      <span>当前显示: <strong id="showing-range" class="text-slate-950 dark:text-slate-200 num-font font-semibold">0 - 0</strong> / <strong id="total-filtered" class="text-slate-950 dark:text-slate-200 num-font font-semibold">0</strong> 条</span>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-1 font-medium">
+        <span>每页:</span>
+        <select id="select-pagesize" onchange="changePageSize()" class="bg-slate-100 dark:bg-[#121927] border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded py-0.5 px-1.5 font-bold text-indigo-700 dark:text-indigo-300">
+          <option value="99999" selected>全部展示 (5213+ 只股票)</option>
+          <option value="100">100 条/页</option>
+          <option value="250">250 条/页</option>
+          <option value="500">500 条/页</option>
+          <option value="1000">1000 条/页</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-1">
+        <button onclick="prevPage()" class="p-1 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-40 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 transition">
+          <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        </button>
+        <span class="px-2 num-font text-slate-700 dark:text-slate-300 font-semibold"><span id="current-page">1</span> / <span id="total-pages">1</span> 页</span>
+        <button onclick="nextPage()" class="p-1 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-40 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 transition">
+          <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal 0: Custom Industry Management & Excel Import/Export -->
+  <div id="custom-industry-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-[#0f172a] border border-slate-300 dark:border-slate-700 rounded-xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-indigo-900 via-blue-900 to-slate-900 px-5 py-3 text-white flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-2">
+          <i data-lucide="layers" class="w-4 h-4 text-amber-300"></i>
+          <h3 class="text-sm font-bold">自定义产业大类体系管理与 Excel 导入导出</h3>
+        </div>
+        <button onclick="closeModal('custom-industry-modal')" class="text-slate-400 hover:text-white transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      
+      <!-- Content -->
+      <div class="p-4 overflow-y-auto space-y-4 flex-grow text-xs">
+        <div class="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-slate-700 dark:text-slate-300 space-y-1">
+          <div class="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+            <i data-lucide="info" class="w-4 h-4 text-blue-600"></i> 易用性操作指南
+          </div>
+          <p class="text-[11px] leading-relaxed">
+            支持将 31 个申万一级行业灵活划分为宏观产业大类（如科技创造、民生消费、资源保障等）。您可以在下方直接下拉调整，也可以点击“下载标准 Excel 模板”在本地编辑后一键上传导入，修改后永久保存在浏览器本地并实时生效！
+          </p>
+        </div>
+
+        <!-- Actions Toolbar -->
+        <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-100 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center gap-2">
+            <button onclick="downloadExcelTemplate()" class="flex items-center gap-1.5 bg-white dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 font-bold transition shadow-sm">
+              <i data-lucide="download" class="w-3.5 h-3.5 text-blue-600"></i>
+              <span>下载标准 Excel 模板</span>
+            </button>
+
+            <label class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-bold cursor-pointer transition shadow-sm">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+              <span>导入 Excel 映射表</span>
+              <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelImport(event)" />
+            </label>
+
+            <button onclick="exportCustomIndustryExcel()" class="flex items-center gap-1.5 bg-white dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 font-bold transition shadow-sm">
+              <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-600"></i>
+              <span>导出当前分类 Excel</span>
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="resetCustomGroupsToDefault()" class="text-amber-700 dark:text-amber-400 hover:underline font-semibold flex items-center gap-1 text-xs">
+              <i data-lucide="rotate-ccw" class="w-3 h-3"></i> 恢复系统默认
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive Mapping Grid -->
+        <div class="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700">
+              <tr>
+                <th class="py-2 px-3 w-12 text-center">#</th>
+                <th class="py-2 px-3 w-44">申万一级行业 (31个)</th>
+                <th class="py-2 px-3 w-48">所属产业大类</th>
+                <th class="py-2 px-3">快速切换归属大类</th>
+              </tr>
+            </thead>
+            <tbody id="custom-ind-table-body" class="divide-y divide-slate-200 dark:divide-slate-800">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="bg-slate-50 dark:bg-[#0b1019] px-5 py-3 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0">
+        <span id="custom-group-status-msg" class="text-xs text-slate-500 font-medium"></span>
+        <div class="flex items-center gap-2">
+          <button onclick="closeModal('custom-industry-modal')" class="px-4 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-300 transition">
+            取消
+          </button>
+          <button onclick="saveAndApplyCustomGroups()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition shadow-sm flex items-center gap-1">
+            <i data-lucide="check" class="w-4 h-4"></i> 保存并立即生效
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 1: 9 Factors Strategy Detail Popover -->
+  <div id="factor-detail-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-[#0f172a] border border-slate-300 dark:border-slate-700 rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 px-5 py-3 text-white flex justify-between items-center shrink-0">
+        <h3 class="text-sm font-bold flex items-center gap-2">
+          <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i>
+          <span id="pop-factor-title">股票多因子特征</span>
+        </h3>
+        <div class="flex items-center gap-2">
+          <button onclick="openKlineFromFactorDetail()" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded-lg flex items-center gap-1 font-semibold transition shadow-sm" title="展开该股票 K 线图">
+            <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+            <span>K 线图</span>
+          </button>
+          <button onclick="closeModal('factor-detail-modal')" class="text-slate-400 hover:text-white transition">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-4 text-xs text-slate-800 dark:text-slate-200">
+        <!-- Stock Basic Card -->
+        <div class="grid grid-cols-3 gap-3">
+          <div class="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 rounded-lg">
+            <span class="text-emerald-700 dark:text-emerald-400 text-[11px] font-bold">复权收盘 (主):</span>
+            <div id="pop-factor-close" class="text-base font-extrabold num-font text-emerald-700 dark:text-emerald-400">--</div>
+            <div id="pop-factor-raw-close" class="text-[10px] text-slate-500 dark:text-slate-400 num-font mt-0.5">原始收盘: --</div>
+          </div>
+          <div class="p-2.5 bg-slate-100 dark:bg-slate-800/60 rounded-lg">
+            <span class="text-slate-500 text-[11px]">今日成交金额:</span>
+            <div id="pop-factor-turnover" class="text-sm font-extrabold num-font text-orange-600 dark:text-orange-400">--</div>
+          </div>
+          <div class="p-2.5 bg-slate-100 dark:bg-slate-800/60 rounded-lg">
+            <span class="text-slate-500 text-[11px]">申万 1/2/3 级行业:</span>
+            <div id="pop-factor-sw-tags" class="flex flex-wrap gap-1 mt-0.5">--</div>
+          </div>
+        </div>
+
+        <!-- 1. HL+5R & 5R Detail -->
+        <div class="border border-slate-200 dark:border-slate-800 rounded-lg p-3 space-y-2 bg-slate-50 dark:bg-slate-900/40">
+          <div class="font-bold text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-1.5 flex justify-between items-center">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span>【5R 与 HL+5R】底部连阳与回撤反弹</span>
+            <span id="pop-5r-status" class="px-2 py-0.5 rounded text-[10px] font-bold">--</span>
+          </div>
+          <div class="grid grid-cols-3 gap-3 num-font text-xs">
+            <div>前180日最大回撤: <strong id="pop-drawdown-180">--</strong> (门槛 > 25%)</div>
+            <div>前30日低点反弹: <strong id="pop-rebound-30">--</strong> (门槛 < 10%)</div>
+            <div>五日阳线累计涨幅: <strong id="pop-gain-5d">--</strong> (门槛 < 13%)</div>
+          </div>
+        </div>
+
+        <!-- 2. 创新高系列 Detail -->
+        <div class="border border-slate-200 dark:border-slate-800 rounded-lg p-3 space-y-2 bg-slate-50 dark:bg-slate-900/40">
+          <div class="font-bold text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-1.5 flex justify-between items-center">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-yellow-500"></span>【创新高系列】覆盖期新高 / 500日新高 / 250日新高</span>
+            <span id="pop-high-status" class="px-2 py-0.5 rounded text-[10px] font-bold">--</span>
+          </div>
+          <div class="grid grid-cols-3 gap-3 num-font text-xs">
+            <div>覆盖期新高 (HIGH_ALL): <strong id="pop-is-ath">--</strong> (上市>500日)</div>
+            <div>500日有效新高 (HIGH_500): <strong id="pop-is-h500">--</strong> (上市>500日)</div>
+            <div>250日有效新高 (HIGH_250): <strong id="pop-is-h250">--</strong> (上市>250日)</div>
+          </div>
+        </div>
+
+        <!-- 3. AMO & HL+AMO Detail -->
+        <div class="border border-slate-200 dark:border-slate-800 rounded-lg p-3 space-y-2 bg-slate-50 dark:bg-slate-900/40">
+          <div class="font-bold text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-1.5 flex justify-between items-center">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-purple-500"></span>【AMO 与 HL+AMO】成交金额放量与低位异动</span>
+            <span id="pop-amo-status" class="px-2 py-0.5 rounded text-[10px] font-bold">--</span>
+          </div>
+          <div class="grid grid-cols-3 gap-3 num-font text-xs">
+            <div>较昨日成交倍数: <strong id="pop-amt-prev">--</strong> (>1.8x)</div>
+            <div>较前15日最大: <strong id="pop-amt-max15">--</strong> (>1.2x)</div>
+            <div>较前5/10/15日均量: <strong id="pop-amt-avg">--</strong> (>1.8x)</div>
+            <div>10日累计涨幅: <strong id="pop-return-10">--</strong> (<50%)</div>
+            <div>前180日高点回调: <strong id="pop-prev-drawdown-180">--</strong> (HL条件 >25%)</div>
+          </div>
+        </div>
+
+        <!-- 4. MA250 / MA377 均线支撑 Detail -->
+        <div class="border border-slate-200 dark:border-slate-800 rounded-lg p-3 space-y-2 bg-slate-50 dark:bg-slate-900/40">
+          <div class="font-bold text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-1.5 flex justify-between items-center">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-sky-500"></span>【均线支撑系列】MA250 与 MA377 支撑</span>
+            <span id="pop-ma-supp-status" class="px-2 py-0.5 rounded text-[10px] font-bold">--</span>
+          </div>
+          <div class="grid grid-cols-3 gap-3 num-font text-xs">
+            <div>MA250 距离偏离: <strong id="pop-dist-ma250">--</strong> (门槛 -2% ~ 7%)</div>
+            <div>MA377 距离偏离: <strong id="pop-dist-ma377">--</strong> (门槛 -2% ~ 7%)</div>
+            <div>支撑判定类型: <strong id="pop-supp-type">--</strong></div>
+          </div>
+        </div>
+
+        <!-- 5. MA Bullish Detail -->
+        <div class="border border-slate-200 dark:border-slate-800 rounded-lg p-3 space-y-2">
+          <div class="font-bold text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-1.5 flex justify-between items-center">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>【均线多头超级排列】MA5/10/20/60/120/250/377 特征矩阵</span>
+            <span id="pop-ma-status" class="px-2 py-0.5 rounded text-[10px] font-bold">--</span>
+          </div>
+          <div class="grid grid-cols-4 gap-2 num-font text-xs">
+            <div>MA5: <strong id="pop-ma5">--</strong></div>
+            <div>MA10: <strong id="pop-ma10">--</strong></div>
+            <div>MA20: <strong id="pop-ma20">--</strong></div>
+            <div>MA60: <strong id="pop-ma60">--</strong></div>
+            <div>MA120: <strong id="pop-ma120">--</strong></div>
+            <div>MA250: <strong id="pop-ma250" class="text-amber-800 dark:text-amber-300">--</strong></div>
+            <div>MA377: <strong id="pop-ma377" class="text-sky-800 dark:text-sky-300">--</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-100 dark:bg-[#1e293b] px-5 py-2.5 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-2">
+          <button onclick="openVibeAiDrawerFromDetail()" class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white px-4 py-2 rounded-xl font-bold shadow-md hover:shadow-lg flex items-center gap-2 text-xs transition transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer">
+            <i data-lucide="sparkles" class="w-4 h-4 text-amber-300"></i>
+            <span>AI 深度量化诊断</span>
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openKlineFromFactorDetail()" class="bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 px-3.5 py-2 rounded-xl font-semibold text-xs transition cursor-pointer">查看K线</button>
+          <button onclick="closeModal('factor-detail-modal')" class="bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 text-slate-800 dark:text-slate-200 px-4 py-2 rounded-xl font-semibold text-xs transition cursor-pointer">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: 9 Factors Dictionary -->
+  <div id="dict-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-[#0f172a] border border-slate-300 dark:border-slate-700 rounded-xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="bg-slate-100 dark:bg-[#1e293b] px-5 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+        <h3 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <i data-lucide="book-open" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>
+          全量 9 大核心策略因子定义与判定门槛
+        </h3>
+        <button onclick="closeModal('dict-modal')" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-100 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="p-5 overflow-y-auto space-y-4 text-xs text-slate-700 dark:text-slate-300">
+        <table class="w-full border-collapse border border-slate-300 dark:border-slate-700 text-left text-xs">
+          <thead class="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-200 font-bold">
+            <tr class="divide-x divide-slate-300 dark:divide-slate-700">
+              <th class="p-2 border border-slate-300 dark:border-slate-700 w-36">因子代号</th>
+              <th class="p-2 border border-slate-300 dark:border-slate-700 w-36">策略因子名称</th>
+              <th class="p-2 border border-slate-300 dark:border-slate-700">核心计算规则与公式</th>
+              <th class="p-2 border border-slate-300 dark:border-slate-700 w-24">优先级</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+            <tr class="bg-amber-50 dark:bg-amber-950/20"><td class="p-2 border border-slate-300 dark:border-slate-700 num-font text-amber-700 dark:text-amber-400 font-bold">HL_5R</td><td class="p-2 border border-slate-300 dark:border-slate-700 font-bold">HL+5R 底部五阳</td><td class="p-2 border border-slate-300 dark:border-slate-700">180日回撤>25% 且 30日反弹<10% 且 连续5日收红 且 5日涨幅<13%</td><td class="p-2 border border-slate-300 dark:border-slate-700 text-amber-700 font-bold">P1 (最高)</td></tr>
+            <tr><td class="p-2 border border-slate-300 dark:border-slate-700 num-font text-red-700 dark:text-red-400 font-bold">5R</td><td class="p-2 border border-slate-300 dark:border-slate-700 font-bold">5R 五连阳</td><td class="p-2 border border-slate-300 dark:border-slate-700">连续5日收红 且 前1日收绿 且 排除 HL_5R</td><td class="p-2 border border-slate-300 dark:border-slate-700 text-red-700 font-bold">P2</td></tr>
+            <tr class="bg-yellow-50 dark:bg-yellow-950/20"><td class="p-2 border border-slate-300 dark:border-slate-700 num-font text-yellow-700 dark:text-yellow-400 font-bold">HIGH_ALL</td><td class="p-2 border border-slate-300 dark:border-slate-700 font-bold">👑 覆盖期新高</td><td class="p-2 border border-slate-300 dark:border-slate-700">上市交易日>500 且 突破覆盖期所有前序有效交易日最高价</td><td class="p-2 border border-slate-300 dark:border-slate-700 text-yellow-700 font-bold">P3</td></tr>
+            <tr><td class="p-2 border border-slate-300 dark:border-slate-700 num-font text-orange-700 dark:text-orange-400 font-bold">HIGH_500</td><td class="p-2 border border-slate-300 dark:border-slate-700 font-bold">🔥 500日新高</td><td class="p-2 border border-slate-300 dark:border-slate-700">上市交易日>500 且 (有效交易日>=501 且 突破前500个有效交易日最高点，或突破覆盖期前高)</td><td class="p-2 border border-slate-300 dark:border-slate-700 text-orange-700 font-bold">P4</td></tr>
+            <tr><td class="p-2 border border-slate-300 dark:border-slate-700 num-font text-amber-700 dark:text-amber-400 font-bold">HIGH_250</td><td class="p-2 border border-slate-300 dark:border-slate-700 font-bold">⚡ 250日新高</td><td class="p-2 border border-slate-300 dark:border-slate-700">上市交易日>250 且 (有效交易日>=251 且 突破前250个有效交易日最高点，或突破长周期前高)</td><td class="p-2 border border-slate-300 dark:border-slate-700 text-amber-700 font-bold">P5</td></tr>
+            <tr class="bg-purple-50 dark:bg-purple-950/20"><td class="p-2 border border-slate-300 dark:border-slate-700 num-font text-purple-700 dark:text-purple-400 font-bold">HL_AMO</td><td class="p-2 border border-slate-300 dark:border-slate-700 font-bold">💎 HL+AMO 低位放量</td><td class="p-2 border border-slate-300 dark:border-slate-700">满足 AMO 全部条件 且 前180日回调幅度 > 25%</td><td class="p-2 border border-slate-300 dark:border-slate-700 text-purple-700 font-bold">P6</td></tr>
+            <tr><td class="p-2 border border-slate-300 dark:border-slate-700 num-font text-orange-700 dark:text-orange-400 font-bold">AMO</td><td class="p-2 border border-slate-300 dark:border-slate-700 font-bold">⚡ AMO 放量突破</td><td class="p-2 border border-slate-300 dark:border-slate-700">今日成交额>1亿 且 达前15日最大1.2x 且 达昨量/5/10/15日均量1.8x 且 今日收红 且 10日涨幅<50%</td><td class="p-2 border border-slate-300 dark:border-slate-700 text-orange-700 font-bold">P7</td></tr>
+            <tr class="bg-sky-50 dark:bg-sky-950/20"><td class="p-2 border border-slate-300 dark:border-slate-700 num-font text-sky-700 dark:text-sky-400 font-bold">MA377_SUPPORT</td><td class="p-2 border border-slate-300 dark:border-slate-700 font-bold">🛡️ MA377 均线支撑</td><td class="p-2 border border-slate-300 dark:border-slate-700">连续4个交易日 close/MA377-1 在 [-2%, 7%] 之间 且 至少1日收红</td><td class="p-2 border border-slate-300 dark:border-slate-700 text-sky-700 font-bold">P8</td></tr>
+            <tr class="bg-cyan-50 dark:bg-cyan-950/20"><td class="p-2 border border-slate-300 dark:border-slate-700 num-font text-cyan-700 dark:text-cyan-400 font-bold">MA250_SUPPORT</td><td class="p-2 border border-slate-300 dark:border-slate-700 font-bold">🛡️ MA250 均线支撑</td><td class="p-2 border border-slate-300 dark:border-slate-700">连续4个交易日 close/MA250-1 在 [-2%, 7%] 之间 且 至少1日收红</td><td class="p-2 border border-slate-300 dark:border-slate-700 text-cyan-700 font-bold">P9</td></tr>
+            <tr class="bg-emerald-50 dark:bg-emerald-950/20"><td class="p-2 border border-slate-300 dark:border-slate-700 num-font text-emerald-700 dark:text-emerald-400 font-bold">MA_BULLISH (LABEL)</td><td class="p-2 border border-slate-300 dark:border-slate-700 font-bold">📈 均线多头超级排列</td><td class="p-2 border border-slate-300 dark:border-slate-700">MA5>10>20>60>120>250 且 昨天均线亦多头 且 6条均线较昨日全线上升</td><td class="p-2 border border-slate-300 dark:border-slate-700 text-emerald-700 font-bold">趋势形态</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="bg-slate-100 dark:bg-[#1e293b] px-5 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+        <button onclick="closeModal('dict-modal')" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg transition font-semibold shadow-sm">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Stock K-Line Chart Modal -->
+  <div id="kline-modal" class="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-sm hidden flex items-center justify-center p-2 sm:p-4" onclick="if(event.target===this) closeKlineModal()">
+    <div class="bg-white dark:bg-[#0f172a] border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-6xl h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <!-- Modal Header -->
+      <div class="bg-slate-100 dark:bg-[#1e293b] px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+            <i data-lucide="trending-up" class="w-4 h-4"></i>
+          </div>
+          <h3 id="kline-modal-title" class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <span class="num-font text-blue-600 dark:text-blue-400 font-extrabold">600519</span>
+            <span>贵州茅台</span>
+            <span class="text-xs font-normal text-slate-500 dark:text-slate-400 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded-full">K 线行情</span>
+          </h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openVibeAiDrawerFromKline()" class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold transition shadow-sm" title="调用 Vibe-Trading AI 智能体生成深度研报">
+            <i data-lucide="bot" class="w-3.5 h-3.5 text-amber-300"></i>
+            <span>AI 研报</span>
+          </button>
+          <a id="kline-external-link" href="#" target="_blank" class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition font-medium shadow-sm" title="在新标签页中独立打开该 K 线图">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">独立新窗口</span>
+          </a>
+          <button onclick="reloadKlineIframe()" class="p-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition shadow-sm" title="重新加载 K 线图">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          </button>
+          <button onclick="closeKlineModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-800 transition" title="关闭 (Esc)">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Modal Body (Iframe + Loading state) -->
+      <div class="relative flex-1 w-full h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
+        <div id="kline-loading" class="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm z-10">
+          <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <span class="mt-3 text-xs font-semibold text-slate-600 dark:text-slate-300">正在载入专业 K 线行情系统...</span>
+          <span id="kline-loading-url" class="mt-1 text-[10px] text-slate-400 font-mono max-w-md truncate"></span>
+        </div>
+        <iframe id="kline-iframe" src="about:blank" class="w-full h-full border-0" allow="fullscreen" onload="handleKlineIframeLoaded()"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let datesIndex = [];
+    let stockSummary = {};
+    let stockBasicMap = {};
+    let dailyCache = {};
+    let dailyMapCache = {};
+    let currentSpan = 90;
+    let activeDates = [];
+    let masterStockList = [];
+    let swTree = {};
+    let appVersion = 'v1';
+
+    let historyMatrixData = null;
+    let customGroupsData = null;
+    let defaultCustomGroups = null;
+    let selectedCustomGroup = 'all';
+
+    let filteredData = [];
+    let currentQuickFilter = 'all';
+    let sortField = 'streak';
+    let sortAsc = false;
+
+    let currentPage = 1;
+    let pageSize = 99999;
+
+    const DEFAULT_CUSTOM_CONFIG = {
+      groups: [
+        { name: "科技制造层", color: "blue", sw_ind1: ["电子", "通信", "计算机", "汽车", "电力设备", "国防军工", "机械设备", "医药生物"] },
+        { name: "民生消费层", color: "amber", sw_ind1: ["农林牧渔", "房地产", "家用电器", "轻工制造", "纺织服饰", "美容护理", "食品饮料", "社会服务", "传媒", "商贸零售"] },
+        { name: "资源保障层", color: "red", sw_ind1: ["银行", "非银金融", "钢铁", "基础化工", "环保", "煤炭", "有色金属", "石油石化", "公用事业", "建筑材料", "建筑装饰", "交通运输", "综合"] }
+      ],
+      mapping: {}
+    };
+    DEFAULT_CUSTOM_CONFIG.groups.forEach(g => {
+      g.sw_ind1.forEach(ind => { DEFAULT_CUSTOM_CONFIG.mapping[ind] = g.name; });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      initApp();
+    });
+
+        // ============================================================
+    // 定长紧凑列式数组 (Compact Array) 极速解包器与自适应切片加载器
+    // 单日传输体积从 832KB 骤降至 350KB，解析耗时仅 ~2ms
+    // ============================================================
+    function unpackCompactDaily(compactObj) {
+      if (!compactObj || !Array.isArray(compactObj.data)) return compactObj;
+      const data = compactObj.data;
+      const len = data.length;
+      const list = new Array(len);
+
+      for (let i = 0; i < len; i++) {
+        const r = data[i];
+        list[i] = {
+          code: r[0],
+          name: r[1],
+          sw_ind1: r[2],
+          sw_ind2: r[3],
+          sw_ind3: r[4],
+          custom_group: r[5],
+          adj_close: r[6],
+          raw_close: r[7],
+          close: r[6],
+          turnover: r[8],
+          tag_mask: r[9],
+          adj: {
+            close: r[6],
+            raw_close: r[7],
+            adj_close: r[6],
+            label: r[10],
+            ma5: r[11],
+            ma10: r[12],
+            ma20: r[13],
+            ma60: r[14],
+            ma120: r[15],
+            ma250: r[16],
+            ma377: r[17]
+          },
+          raw: {
+            close: r[7],
+            raw_close: r[7],
+            adj_close: r[6],
+            label: r[10]
+          },
+          factors: {
+            factor_hl_5r: r[18],
+            factor_5r: r[19],
+            factor_high_all: r[20],
+            factor_high_500: r[21],
+            factor_high_250: r[22],
+            factor_hl_amo: r[23],
+            factor_amo: r[24],
+            factor_ma377_support: r[25],
+            factor_ma250_support: r[26],
+            ma_support_type: r[38],
+            details: {
+              drawdown_180_pct: r[27],
+              low_rebound_30_pct: r[28],
+              five_day_gain_pct: r[29],
+              return_10_pct: r[30],
+              prev_drawdown_180_pct: (r.length > 39 && r[39] !== undefined) ? r[39] : null,
+              amt_ratio_prev: r[31],
+              amt_ratio_ma5: r[32],
+              amt_ratio_ma10: r[33],
+              amt_ratio_ma15: r[34],
+              amt_ratio_max15: r[35],
+              dist_ma250_pct: r[36],
+              dist_ma377_pct: r[37]
+            }
+          }
+        };
+      }
+      return list;
+    }
+
+    async function fetchDailySlice(dateStr) {
+      try {
+        const compactRes = await fetchJsonCached(`data/data_${dateStr}.compact.json?v=${appVersion}`);
+        if (compactRes && compactRes.schema && Array.isArray(compactRes.data)) {
+          return unpackCompactDaily(compactRes);
+        }
+      } catch (err) {
+        // 自动平滑降级：尝试加载传统冗余 JSON
+      }
+      return await fetchJsonCached(`data/data_${dateStr}.json?v=${appVersion}`);
+    }
+
+    async function fetchJsonCached(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    }
+
+
+    // 横向日期矩阵快捷滚动导航
+    function scrollTableDates(dayDelta) {
+      const container = document.getElementById('table-container');
+      if (container) {
+        container.scrollBy({ left: dayDelta * DATE_COL_WIDTH, behavior: 'smooth' });
+      }
+    }
+
+    function scrollTableDatesToEdge(edge) {
+      const container = document.getElementById('table-container');
+      if (container) {
+        if (edge === 'latest') {
+          container.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+          container.scrollTo({ left: container.scrollWidth, behavior: 'smooth' });
+        }
+      }
+    }
+
+    // 切换全市场基准交易日 (支持近 90/200 交易日任意日期切换)
+    async function changeBaseTradingDay(targetDate) {
+      if (!targetDate) return;
+      const loadingIndicator = document.getElementById('preload-status-badge');
+      if (loadingIndicator) {
+        loadingIndicator.innerText = `⏳ 加载 ${targetDate}...`;
+        loadingIndicator.classList.remove('hidden');
+      }
+
+      if (!dailyCache[targetDate]) {
+        try {
+          const slice = await fetchDailySlice(targetDate);
+          dailyCache[targetDate] = slice;
+          const m = new Map();
+          for (let s of slice) m.set(s.code, s);
+          dailyMapCache[targetDate] = m;
+        } catch (e) {
+          console.error("切换基准日失败:", targetDate, e);
+          if (loadingIndicator) loadingIndicator.classList.add('hidden');
+          return;
+        }
+      }
+
+      // 重设当前活动日期序列以 targetDate 为起始
+      const targetIdx = datesIndex.findIndex(d => d.date === targetDate);
+      if (targetIdx >= 0) {
+        activeDates = datesIndex.slice(targetIdx, targetIdx + currentSpan).map(d => d.date);
+      }
+
+      renderMatrixData(activeDates);
+      renderVirtualRows(true);
+
+      const sel = document.getElementById('select-base-date');
+      if (sel) sel.value = targetDate;
+
+      if (loadingIndicator) {
+        loadingIndicator.innerText = `✅ 基准日: ${targetDate}`;
+        setTimeout(() => loadingIndicator.classList.add('hidden'), 2500);
+      }
+    }
+
+    // 后台智能渐进预加载近 90 个交易日紧凑切片
+    function startBackgroundPreload() {
+      if (!datesIndex || datesIndex.length === 0) return;
+      const preloadDates = datesIndex.slice(0, 90).map(d => d.date);
+      let idx = 0;
+      let loadedCount = 0;
+
+      function loadNext() {
+        if (idx >= preloadDates.length) {
+          const badge = document.getElementById('preload-status-badge');
+          if (badge) {
+            badge.innerText = '⚡ 90日全量切片已就绪';
+            badge.classList.remove('hidden');
+            setTimeout(() => badge.classList.add('hidden'), 4000);
+          }
+          return;
+        }
+        const d = preloadDates[idx++];
+        if (!dailyCache[d]) {
+          fetchDailySlice(d).then(slice => {
+            dailyCache[d] = slice;
+            const m = new Map();
+            for (let s of slice) m.set(s.code, s);
+            dailyMapCache[d] = m;
+            loadedCount++;
+            if (window.requestIdleCallback) {
+              requestIdleCallback(loadNext, { timeout: 1500 });
+            } else {
+              setTimeout(loadNext, 120);
+            }
+          }).catch(() => {
+            setTimeout(loadNext, 300);
+          });
+        } else {
+          loadedCount++;
+          setTimeout(loadNext, 40);
+        }
+      }
+
+      // 延迟 800ms 启动后台预加载，优先保障首屏渲染极致丝滑
+      setTimeout(loadNext, 800);
+    }
+
+    async function initApp() {
+      try {
+        const ts = Date.now();
+        // 1. 并发请求元数据、日期索引、连续多头汇总、轻量历史矩阵与行业大类配置
+        const [metaRes, indexRes, summaryRes, customRes, matrixRes, basicRes] = await Promise.allSettled([
+          fetchJsonCached(`data/meta.json?v=${ts}`),
+          fetchJsonCached(`data/dates_index.json?v=${ts}`),
+          fetchJsonCached(`data/stock_200d_summary.json?v=${ts}`),
+          fetchJsonCached(`data/sw_custom_group.json?v=${ts}`),
+          fetchJsonCached(`data/history_matrix.json?v=${ts}`),
+          fetchJsonCached(`data/stock_basic_index.json?v=${ts}`)
+        ]);
+
+        if (basicRes && basicRes.status === 'fulfilled') {
+          stockBasicMap = basicRes.value || {};
+        }
+
+        if (metaRes.status === 'fulfilled') {
+          const meta = metaRes.value;
+          appVersion = meta.coverage_end || ts;
+          const snaps = meta.snapshot_count || (datesIndex ? datesIndex.length : 0);
+          const covEl = document.getElementById('stat-coverage-period');
+          if (covEl && meta.coverage_start && meta.total_coverage_days) {
+            covEl.innerText = `${meta.coverage_start} 至今 (${meta.total_coverage_days}交易日 / ${snaps}快照)`;
+          }
+          const totalEl = document.getElementById('stat-total');
+          const totalStocks = meta.total_stocks_latest;
+          if (totalEl && totalStocks) totalEl.innerText = totalStocks.toLocaleString();
+        }
+
+        if (indexRes.status === 'fulfilled') {
+          const rawDates = indexRes.value;
+          datesIndex = rawDates.sort((a, b) => b.date.localeCompare(a.date));
+        }
+
+        if (summaryRes.status === 'fulfilled') {
+          stockSummary = summaryRes.value;
+        }
+
+        // 初始化行业分类大类配置 (优先从本地 LocalStorage 读取用户个性化配置)
+        if (customRes.status === 'fulfilled') {
+          defaultCustomGroups = customRes.value;
+        } else {
+          defaultCustomGroups = JSON.parse(JSON.stringify(DEFAULT_CUSTOM_CONFIG));
+        }
+
+        const localSaved = localStorage.getItem('ashare_custom_groups');
+        if (localSaved) {
+          try {
+            customGroupsData = JSON.parse(localSaved);
+            if (!customGroupsData || !customGroupsData.groups || customGroupsData.groups.length !== 3) {
+              // 旧版 5 分类缓存自动平滑升级为新版 3 大层
+              customGroupsData = JSON.parse(JSON.stringify(defaultCustomGroups));
+              localStorage.setItem('ashare_custom_groups', JSON.stringify(customGroupsData));
+            }
+          } catch(e) {
+            customGroupsData = JSON.parse(JSON.stringify(defaultCustomGroups));
+          }
+        } else {
+          customGroupsData = JSON.parse(JSON.stringify(defaultCustomGroups));
+        }
+
+        if (matrixRes.status === 'fulfilled') {
+          historyMatrixData = matrixRes.value;
+        }
+
+        // 2. 极致首屏秒开：优先加载 350KB 定长紧凑切片 (.compact.json) 并自动降级
+        if (datesIndex && datesIndex.length > 0) {
+          const latestDate = datesIndex[0].date;
+          try {
+            const latestSlice = await fetchDailySlice(latestDate);
+            dailyCache[latestDate] = latestSlice;
+            const m = new Map();
+            for (let s of latestSlice) m.set(s.code, s);
+            dailyMapCache[latestDate] = m;
+          } catch(e) { console.warn("Failed loading latest slice", e); }
+        }
+
+        // 3. 默认直接以 90 交易日呈现全景矩阵
+        setCalendarSpan(90);
+        renderCustomGroupTabs();
+
+        // 填充基准交易日选择下拉菜单 (近 90 个交易日)
+        const dateSel = document.getElementById('select-base-date');
+        if (dateSel && datesIndex) {
+          dateSel.innerHTML = datesIndex.slice(0, 90).map((d, i) => {
+            const isLatest = (i === 0);
+            return `<option value="${d.date}" ${isLatest ? 'selected' : ''}>${d.date}${isLatest ? ' (最新)' : ''} [多头:${d.label1_count||0}]</option>`;
+          }).join('');
+        }
+
+        // 启动后台静默渐进预加载近 90 交易日切片
+        startBackgroundPreload();
+      } catch (e) {
+        console.warn("Init App error:", e);
+      }
+    }
+
+    function getCustomGroupForSw1(sw1) {
+      if (!sw1 || sw1 === '未分类') return '未分类';
+      if (customGroupsData && customGroupsData.mapping && customGroupsData.mapping[sw1]) {
+        return customGroupsData.mapping[sw1];
+      }
+      return '其他';
+    }
+
+    function renderCustomGroupTabs() {
+      const container = document.getElementById('custom-group-tabs-container');
+      if (!container) return;
+
+      const counts = { all: masterStockList.length };
+      if (customGroupsData && customGroupsData.groups) {
+        customGroupsData.groups.forEach(g => counts[g.name] = 0);
+      }
+      masterStockList.forEach(item => {
+        const grp = item.custom_group || '其他';
+        counts[grp] = (counts[grp] || 0) + 1;
+      });
+
+      let html = `
+        <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 shrink-0 mr-1">
+          <i data-lucide="layers" class="w-3.5 h-3.5 text-indigo-600"></i> 产业大类:
+        </span>
+        <button id="tab-cgrp-all" onclick="selectCustomGroupTab('all')" class="px-2.5 py-0.5 rounded-md border text-xs font-bold transition shadow-sm ${selectedCustomGroup === 'all' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100'}">
+          全部大类 (${counts.all || 0})
+        </button>
+      `;
+
+      if (customGroupsData && customGroupsData.groups) {
+        customGroupsData.groups.forEach(g => {
+          const isActive = selectedCustomGroup === g.name;
+          const count = counts[g.name] || 0;
+          let btnCls = '';
+          if (isActive) {
+            btnCls = 'border-indigo-600 bg-indigo-600 text-white shadow-sm font-bold';
+          } else {
+            btnCls = 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-slate-700 font-semibold';
+          }
+          html += `
+            <button id="tab-cgrp-${g.name}" onclick="selectCustomGroupTab('${g.name}')" class="px-2.5 py-0.5 rounded-md border text-xs transition ${btnCls}">
+              ${g.name} (${count})
+            </button>
+          `;
+        });
+      }
+
+      container.innerHTML = html;
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function selectCustomGroupTab(grpName) {
+      selectedCustomGroup = grpName;
+      const sel = document.getElementById('select-custom-group');
+      if (sel) sel.value = grpName;
+      renderCustomGroupTabs();
+      updateSw1Options();
+      applyFilters();
+    }
+
+    function onCustomGroupChange() {
+      const sel = document.getElementById('select-custom-group');
+      if (sel) {
+        selectedCustomGroup = sel.value;
+        renderCustomGroupTabs();
+        updateSw1Options();
+        applyFilters();
+      }
+    }
+
+    function setCalendarSpan(span) {
+      currentSpan = span;
+      [10, 15, 30, 60, 90].forEach(s => {
+        const btn = document.getElementById(`btn-span-${s}`);
+        if (btn) {
+          if (s === span) {
+            btn.className = 'px-2 py-0.5 rounded border border-blue-500/60 bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold hover:bg-blue-500/20 transition shadow-sm';
+          } else {
+            btn.className = 'px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold hover:bg-slate-200 transition';
+          }
+        }
+      });
+      loadCalendarMatrix(span);
+    }
+
+    function loadCalendarMatrix(span) {
+      if (historyMatrixData && historyMatrixData.dates) {
+        activeDates = historyMatrixData.dates.slice(0, span);
+      } else if (datesIndex && datesIndex.length > 0) {
+        activeDates = datesIndex.slice(0, span).map(d => d.date);
+      } else {
+        return;
+      }
+      renderMatrixData(activeDates);
+    }
+
+    function renderMatrixData(activeDatesList) {
+      const latestDate = activeDatesList[0] || (datesIndex[0] && datesIndex[0].date);
+      const baseRows = dailyCache[latestDate] || [];
+
+      const elemDate = document.getElementById('stat-latest-date');
+      if (elemDate) elemDate.innerText = latestDate;
+
+      const latestMeta = datesIndex.find(d => d.date === latestDate);
+      if (latestMeta) {
+        document.getElementById('stat-label1').innerText = (latestMeta.label1_count || 0).toLocaleString();
+        document.getElementById('stat-hl5r').innerText = (latestMeta.factor_hl_5r_count || 0).toLocaleString();
+        document.getElementById('stat-5r').innerText = (latestMeta.factor_5r_count || 0).toLocaleString();
+        document.getElementById('stat-high-all').innerText = (latestMeta.factor_high_all_count || 0).toLocaleString();
+        document.getElementById('stat-high-500').innerText = (latestMeta.factor_high_500_count || 0).toLocaleString();
+        document.getElementById('stat-high-250').innerText = (latestMeta.factor_high_250_count || 0).toLocaleString();
+        document.getElementById('stat-hlamo').innerText = (latestMeta.factor_hl_amo_count || 0).toLocaleString();
+        document.getElementById('stat-amo').innerText = (latestMeta.factor_amo_count || 0).toLocaleString();
+        document.getElementById('stat-ma377').innerText = (latestMeta.factor_ma377_count || 0).toLocaleString();
+        document.getElementById('stat-ma250').innerText = (latestMeta.factor_ma250_count || 0).toLocaleString();
+      }
+
+      swTree = {};
+
+      masterStockList = baseRows.map(stock => {
+        const code = stock.code;
+        const summary = stockSummary[code] || {};
+        const sw1 = stock.sw_ind1 || '未分类';
+        const sw2 = stock.sw_ind2 || '未分类';
+        const sw3 = stock.sw_ind3 || '未分类';
+        const cGrp = getCustomGroupForSw1(sw1);
+
+        if (sw1 && sw1 !== '未分类') {
+          if (!swTree[sw1]) swTree[sw1] = {};
+          if (sw2 && sw2 !== '未分类') {
+            if (!swTree[sw1][sw2]) swTree[sw1][sw2] = new Set();
+            if (sw3 && sw3 !== '未分类') {
+              swTree[sw1][sw2].add(sw3);
+            }
+          }
+        }
+
+        const adjData = stock.adj || {};
+        const rawData = stock.raw || {};
+        const streakVal = summary.streak || 0;
+
+        const adjCloseVal = adjData.close !== undefined ? adjData.close : (stock.adj_close || stock.close);
+        const rawCloseVal = rawData.close !== undefined ? rawData.close : (stock.raw_close || stock.close);
+
+        const stockName = (stock.name && stock.name.trim()) 
+          ? stock.name 
+          : ((stockBasicMap[stock.code] && stockBasicMap[stock.code].n) ? stockBasicMap[stock.code].n : stock.code);
+
+        return {
+          code: stock.code,
+          name: stockName,
+          sw_ind1: sw1,
+          sw_ind2: sw2,
+          sw_ind3: sw3,
+          custom_group: cGrp,
+          adj_close: adjCloseVal,
+          raw_close: rawCloseVal,
+          close: adjCloseVal,
+          turnover: stock.turnover || 0,
+          streak: streakVal,
+          factors: stock.factors || {},
+          label_latest: adjData.label || 0
+        };
+      });
+
+      populateCustomGroupOptions();
+      populateSw1Options();
+      renderCustomGroupTabs();
+      renderHeaderColumns();
+      applyFilters();
+    }
+
+    function populateCustomGroupOptions() {
+      const sel = document.getElementById('select-custom-group');
+      if (!sel) return;
+      const prev = sel.value;
+      sel.innerHTML = '<option value="all">全产业大类</option>';
+      if (customGroupsData && customGroupsData.groups) {
+        customGroupsData.groups.forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g.name;
+          opt.innerText = g.name;
+          sel.appendChild(opt);
+        });
+      }
+      sel.value = prev || selectedCustomGroup || 'all';
+    }
+
+    function populateSw1Options() {
+      updateSw1Options();
+    }
+
+    function updateSw1Options() {
+      const sw1Select = document.getElementById('select-sw-ind1');
+      if (!sw1Select) return;
+      const prev1 = sw1Select.value;
+      sw1Select.innerHTML = '<option value="all">全1级行业</option>';
+
+      let validSw1List = Object.keys(swTree);
+      if (selectedCustomGroup !== 'all' && customGroupsData && customGroupsData.groups) {
+        const found = customGroupsData.groups.find(g => g.name === selectedCustomGroup);
+        if (found && found.sw_ind1) {
+          validSw1List = validSw1List.filter(ind => found.sw_ind1.includes(ind));
+        }
+      }
+
+      validSw1List.sort().forEach(ind1 => {
+        const opt = document.createElement('option');
+        opt.value = ind1;
+        opt.innerText = ind1;
+        sw1Select.appendChild(opt);
+      });
+      sw1Select.value = prev1 && validSw1List.includes(prev1) ? prev1 : 'all';
+      updateSw2Options();
+    }
+
+    function onSw1Change() {
+      updateSw2Options();
+      applyFilters();
+    }
+
+    function updateSw2Options() {
+      const sw1Val = document.getElementById('select-sw-ind1').value;
+      const sw2Select = document.getElementById('select-sw-ind2');
+      const prev2 = sw2Select.value;
+      sw2Select.innerHTML = '<option value="all">全2级</option>';
+
+      let sw2List = [];
+      if (sw1Val === 'all') {
+        const set2 = new Set();
+        let allowedSw1 = Object.keys(swTree);
+        if (selectedCustomGroup !== 'all' && customGroupsData && customGroupsData.groups) {
+          const found = customGroupsData.groups.find(g => g.name === selectedCustomGroup);
+          if (found && found.sw_ind1) allowedSw1 = allowedSw1.filter(ind => found.sw_ind1.includes(ind));
+        }
+        allowedSw1.forEach(ind1 => {
+          if (swTree[ind1]) Object.keys(swTree[ind1]).forEach(ind2 => set2.add(ind2));
+        });
+        sw2List = Array.from(set2);
+      } else if (swTree[sw1Val]) {
+        sw2List = Object.keys(swTree[sw1Val]);
+      }
+
+      sw2List.sort().forEach(ind2 => {
+        const opt = document.createElement('option');
+        opt.value = ind2;
+        opt.innerText = ind2;
+        sw2Select.appendChild(opt);
+      });
+      sw2Select.value = prev2 && sw2List.includes(prev2) ? prev2 : 'all';
+      updateSw3Options();
+    }
+
+    function onSw2Change() {
+      updateSw3Options();
+      applyFilters();
+    }
+
+    function updateSw3Options() {
+      const sw1Val = document.getElementById('select-sw-ind1').value;
+      const sw2Val = document.getElementById('select-sw-ind2').value;
+      const sw3Select = document.getElementById('select-sw-ind3');
+      const prev3 = sw3Select.value;
+      sw3Select.innerHTML = '<option value="all">全3级行业</option>';
+
+      let sw3Set = new Set();
+      if (sw1Val === 'all' && sw2Val === 'all') {
+        let allowedSw1 = Object.keys(swTree);
+        if (selectedCustomGroup !== 'all' && customGroupsData && customGroupsData.groups) {
+          const found = customGroupsData.groups.find(g => g.name === selectedCustomGroup);
+          if (found && found.sw_ind1) allowedSw1 = allowedSw1.filter(ind => found.sw_ind1.includes(ind));
+        }
+        allowedSw1.forEach(ind1 => {
+          if (swTree[ind1]) {
+            Object.values(swTree[ind1]).forEach(set3 => {
+              set3.forEach(ind3 => sw3Set.add(ind3));
+            });
+          }
+        });
+      } else if (sw1Val !== 'all' && sw2Val === 'all' && swTree[sw1Val]) {
+        Object.values(swTree[sw1Val]).forEach(set3 => {
+          set3.forEach(ind3 => sw3Set.add(ind3));
+        });
+      } else if (sw2Val !== 'all') {
+        if (sw1Val !== 'all' && swTree[sw1Val] && swTree[sw1Val][sw2Val]) {
+          swTree[sw1Val][sw2Val].forEach(ind3 => sw3Set.add(ind3));
+        } else {
+          Object.values(swTree).forEach(subTree => {
+            if (subTree[sw2Val]) {
+              subTree[sw2Val].forEach(ind3 => sw3Set.add(ind3));
+            }
+          });
+        }
+      }
+
+      Array.from(sw3Set).sort().forEach(ind3 => {
+        const opt = document.createElement('option');
+        opt.value = ind3;
+        opt.innerText = ind3;
+        sw3Select.appendChild(opt);
+      });
+      sw3Select.value = prev3 && sw3Set.has(prev3) ? prev3 : 'all';
+    }
+
+    function onSw3Change() {
+      applyFilters();
+    }
+
+    function renderVirtualHeader(startCol, endCol, leftPad, rightPad) {
+      const headerRow = document.getElementById('table-header-row');
+      if (!headerRow) return;
+
+      while (headerRow.children.length > 7) {
+        headerRow.removeChild(headerRow.lastChild);
+      }
+
+      if (leftPad > 0) {
+        const leftTh = document.createElement('th');
+        leftTh.style.cssText = `width:${leftPad}px;min-width:${leftPad}px;max-width:${leftPad}px;padding:0;margin:0;border:none;background:transparent;`;
+        leftTh.colSpan = startCol;
+        headerRow.appendChild(leftTh);
+      }
+
+      for (let idx = startCol; idx < endCol; idx++) {
+        const d = activeDates[idx];
+        const th = document.createElement('th');
+        const shortDate = d.substring(5);
+        th.className = 'py-2.5 px-1 text-center w-[96px] min-w-[96px] max-w-[96px] border-l border-slate-300 dark:border-slate-800 text-blue-900 dark:text-blue-300 font-extrabold num-font cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-800';
+        th.innerText = shortDate;
+        th.title = `交易日 ${d} (第${idx+1}天)`;
+        th.onclick = () => sortByDateIdx(idx);
+        headerRow.appendChild(th);
+      }
+
+      if (rightPad > 0) {
+        const rightTh = document.createElement('th');
+        rightTh.style.cssText = `width:${rightPad}px;min-width:${rightPad}px;max-width:${rightPad}px;padding:0;margin:0;border:none;background:transparent;`;
+        rightTh.colSpan = activeDates.length - endCol;
+        headerRow.appendChild(rightTh);
+      }
+    }
+
+    function renderHeaderColumns() {
+      // 触发虚拟表头与表体统一 2D 刷新
+      renderVirtualRows(true);
+    }
+
+    function setQuickFilter(type) {
+      currentQuickFilter = type;
+      ['all', 'hl_5r', 'f_5r', 'high_all', 'high_500', 'high_250', 'hl_amo', 'f_amo', 'ma377', 'ma250', 'label1'].forEach(t => {
+        const btn = document.getElementById(`btn-filter-${t}`);
+        if (btn) {
+          if (t === type) {
+            btn.classList.add('ring-2', 'ring-blue-500');
+          } else {
+            btn.classList.remove('ring-2', 'ring-blue-500');
+          }
+        }
+      });
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const search = document.getElementById('search-input').value.trim().toLowerCase();
+      const board = document.getElementById('select-board').value;
+      const sw1Val = document.getElementById('select-sw-ind1').value;
+      const sw2Val = document.getElementById('select-sw-ind2').value;
+      const sw3Val = document.getElementById('select-sw-ind3').value;
+
+      filteredData = masterStockList.filter(item => {
+        const f = item.factors || {};
+
+        if (selectedCustomGroup !== 'all' && item.custom_group !== selectedCustomGroup) return false;
+
+        if (currentQuickFilter === 'hl_5r' && f.factor_hl_5r !== 1) return false;
+        if (currentQuickFilter === 'f_5r' && f.factor_5r !== 1) return false;
+        if (currentQuickFilter === 'high_all' && f.factor_high_all !== 1) return false;
+        if (currentQuickFilter === 'high_500' && f.factor_high_500 !== 1) return false;
+        if (currentQuickFilter === 'high_250' && f.factor_high_250 !== 1) return false;
+        if (currentQuickFilter === 'hl_amo' && f.factor_hl_amo !== 1) return false;
+        if (currentQuickFilter === 'f_amo' && f.factor_amo !== 1) return false;
+        if (currentQuickFilter === 'ma377' && f.factor_ma377_support !== 1) return false;
+        if (currentQuickFilter === 'ma250' && f.factor_ma250_support !== 1) return false;
+        if (currentQuickFilter === 'label1' && item.label_latest !== 1) return false;
+
+        if (sw1Val !== 'all' && item.sw_ind1 !== sw1Val) return false;
+        if (sw2Val !== 'all' && item.sw_ind2 !== sw2Val) return false;
+        if (sw3Val !== 'all' && item.sw_ind3 !== sw3Val) return false;
+
+        const code = item.code || '';
+        if (board === 'main_sh' && !code.startsWith('60')) return false;
+        if (board === 'main_sz' && !code.startsWith('00')) return false;
+        if (board === 'cyb' && !code.startsWith('30')) return false;
+        if (board === 'kcb' && !code.startsWith('68')) return false;
+
+        if (search) {
+          const matchCode = item.code.toLowerCase().includes(search);
+          const matchName = (item.name || '').toLowerCase().includes(search);
+          const matchInd1 = (item.sw_ind1 || '').toLowerCase().includes(search);
+          const matchInd2 = (item.sw_ind2 || '').toLowerCase().includes(search);
+          const matchInd3 = (item.sw_ind3 || '').toLowerCase().includes(search);
+          const matchCGrp = (item.custom_group || '').toLowerCase().includes(search);
+          if (!matchCode && !matchName && !matchInd1 && !matchInd2 && !matchInd3 && !matchCGrp) return false;
+        }
+
+        return true;
+      });
+
+      sortFilteredData();
+      currentPage = 1;
+      renderTable();
+    }
+
+    function sortBy(field) {
+      if (sortField === field) {
+        sortAsc = !sortAsc;
+      } else {
+        sortField = field;
+        sortAsc = false;
+      }
+      sortFilteredData();
+      renderTable();
+    }
+
+    function sortByDateIdx(dateIdx) {
+      const fieldKey = `dateidx_${dateIdx}`;
+      if (sortField === fieldKey) {
+        sortAsc = !sortAsc;
+      } else {
+        sortField = fieldKey;
+        sortAsc = false;
+      }
+      sortFilteredData();
+      renderTable();
+    }
+
+    function sortFilteredData() {
+      filteredData.sort((a, b) => {
+        let valA, valB;
+        if (sortField === 'code') { valA = a.code; valB = b.code; }
+        else if (sortField === 'name') { valA = a.name; valB = b.name; }
+        else if (sortField === 'adj_close') { valA = a.adj_close; valB = b.adj_close; }
+        else if (sortField === 'raw_close') { valA = a.raw_close; valB = b.raw_close; }
+        else if (sortField === 'close') { valA = a.close; valB = b.close; }
+        else if (sortField === 'streak') { valA = a.streak; valB = b.streak; }
+        else if (sortField.startsWith('dateidx_')) {
+          const idx = parseInt(sortField.replace('dateidx_', ''));
+          const rowA = historyMatrixData && historyMatrixData.matrix ? historyMatrixData.matrix[a.code] : null;
+          const rowB = historyMatrixData && historyMatrixData.matrix ? historyMatrixData.matrix[b.code] : null;
+          valA = rowA ? rowA[idx] : -1;
+          valB = rowB ? rowB[idx] : -1;
+        } else {
+          valA = a[sortField]; valB = b[sortField];
+        }
+
+        if (valA === null || valA === undefined) return 1;
+        if (valB === null || valB === undefined) return -1;
+
+        if (valA < valB) return sortAsc ? -1 : 1;
+        if (valA > valB) return sortAsc ? 1 : -1;
+        return 0;
+      });
+    }
+
+    function decodeTagMask(mask) {
+      if (!mask || mask <= 0) return [];
+      const badges = [];
+      if (mask & 1) badges.push({ key: 'hl_5r', text: 'HL+5R', cls: 'badge-hl5r' });
+      else if (mask & 2) badges.push({ key: '5r', text: '5R', cls: 'badge-5r' });
+
+      // 新高徽章展示优化：根据当前快速筛选优先展示对应新高，并允许复合并列展示，避免 500日新高被遮蔽
+      if (typeof currentQuickFilter !== 'undefined' && currentQuickFilter === 'high_500') {
+        if (mask & 8) badges.push({ key: 'high_500', text: '500高', cls: 'badge-high-500' });
+        if (mask & 4) badges.push({ key: 'high_all', text: '新高', cls: 'badge-high-all' });
+        if (mask & 16 && !(mask & 8)) badges.push({ key: 'high_250', text: '250高', cls: 'badge-high-250' });
+      } else if (typeof currentQuickFilter !== 'undefined' && currentQuickFilter === 'high_250') {
+        if (mask & 16) badges.push({ key: 'high_250', text: '250高', cls: 'badge-high-250' });
+        if (mask & 8) badges.push({ key: 'high_500', text: '500高', cls: 'badge-high-500' });
+        if (mask & 4) badges.push({ key: 'high_all', text: '新高', cls: 'badge-high-all' });
+      } else {
+        if (mask & 4) badges.push({ key: 'high_all', text: '新高', cls: 'badge-high-all' });
+        if (mask & 8) badges.push({ key: 'high_500', text: '500高', cls: 'badge-high-500' });
+        if (mask & 16 && !(mask & 8) && !(mask & 4)) badges.push({ key: 'high_250', text: '250高', cls: 'badge-high-250' });
+      }
+
+      if (mask & 32) badges.push({ key: 'hl_amo', text: 'HL+AMO', cls: 'badge-hlamo' });
+      else if (mask & 64) badges.push({ key: 'amo', text: 'AMO', cls: 'badge-amo' });
+
+      if (mask & 128) badges.push({ key: 'ma377', text: 'MA377', cls: 'badge-ma377' });
+      if (mask & 256) badges.push({ key: 'ma250', text: 'MA250', cls: 'badge-ma250' });
+
+      if (mask & 512) badges.push({ key: 'ma', text: '多头', cls: 'badge-ma' });
+      return badges;
+    }
+
+    function renderFactorBadges(factors, code, name, dateStr) {
+      if (!factors) return '<span class="text-slate-400">-</span>';
+      const badges = [];
+
+      if (factors.factor_hl_5r === 1) badges.push(`<span onclick="showFactorDetail('${code}', '${name}', '${dateStr}')" class="px-1.5 py-0.5 rounded text-[10px] badge-hl5r">⭐ HL+5R</span>`);
+      else if (factors.factor_5r === 1) badges.push(`<span onclick="showFactorDetail('${code}', '${name}', '${dateStr}')" class="px-1.5 py-0.5 rounded text-[10px] badge-5r">🔴 5R</span>`);
+
+      // 新高系列徽章判定逻辑：根据激活筛选优先展示对应新高，杜绝包含口径下 500日/250日新高被覆盖期新高完全掩盖
+      if (typeof currentQuickFilter !== 'undefined' && currentQuickFilter === 'high_500') {
+        if (factors.factor_high_500 === 1) badges.push(`<span onclick="showFactorDetail('${code}', '${name}', '${dateStr}')" class="px-1.5 py-0.5 rounded text-[10px] badge-high-500">🔥 500日新高</span>`);
+        if (factors.factor_high_all === 1) badges.push(`<span onclick="showFactorDetail('${code}', '${name}', '${dateStr}')" class="px-1.5 py-0.5 rounded text-[10px] badge-high-all">👑 覆盖期新高</span>`);
+        if (factors.factor_high_250 === 1 && factors.factor_high_500 !== 1) badges.push(`<span onclick="showFactorDetail('${code}', '${name}', '${dateStr}')" class="px-1.5 py-0.5 rounded text-[10px] badge-high-250">⚡ 250日新高</span>`);
+      } else if (typeof currentQuickFilter !== 'undefined' && currentQuickFilter === 'high_250') {
+        if (factors.factor_high_250 === 1) badges.push(`<span onclick="showFactorDetail('${code}', '${name}', '${dateStr}')" class="px-1.5 py-0.5 rounded text-[10px] badge-high-250">⚡ 250日新高</span>`);
+        if (factors.factor_high_500 === 1) badges.push(`<span onclick="showFactorDetail('${code}', '${name}', '${dateStr}')" class="px-1.5 py-0.5 rounded text-[10px] badge-high-500">🔥 500日新高</span>`);
+        if (factors.factor_high_all === 1) badges.push(`<span onclick="showFactorDetail('${code}', '${name}', '${dateStr}')" class="px-1.5 py-0.5 rounded text-[10px] badge-high-all">👑 覆盖期新高</span>`);
+      } else {
+        if (factors.factor_high_all === 1) badges.push(`<span onclick="showFactorDetail('${code}', '${name}', '${dateStr}')" class="px-1.5 py-0.5 rounded text-[10px] badge-high-all">👑 覆盖期新高</span>`);
+        if (factors.factor_high_500 === 1) badges.push(`<span onclick="showFactorDetail('${code}', '${name}', '${dateStr}')" class="px-1.5 py-0.5 rounded text-[10px] badge-high-500">🔥 500日新高</span>`);
+        if (factors.factor_high_250 === 1 && factors.factor_high_500 !== 1 && factors.factor_high_all !== 1) badges.push(`<span onclick="showFactorDetail('${code}', '${name}', '${dateStr}')" class="px-1.5 py-0.5 rounded text-[10px] badge-high-250">⚡ 250日新高</span>`);
+      }
+
+      if (factors.factor_hl_amo === 1) badges.push(`<span onclick="showFactorDetail('${code}', '${name}', '${dateStr}')" class="px-1.5 py-0.5 rounded text-[10px] badge-hlamo">💎 HL+AMO</span>`);
+      if (factors.factor_amo === 1) badges.push(`<span onclick="showFactorDetail('${code}', '${name}', '${dateStr}')" class="px-1.5 py-0.5 rounded text-[10px] badge-amo">⚡ AMO</span>`);
+
+      if (factors.factor_ma377_support === 1) badges.push(`<span onclick="showFactorDetail('${code}', '${name}', '${dateStr}')" class="px-1.5 py-0.5 rounded text-[10px] badge-ma377">🛡️ MA377</span>`);
+      if (factors.factor_ma250_support === 1) badges.push(`<span onclick="showFactorDetail('${code}', '${name}', '${dateStr}')" class="px-1.5 py-0.5 rounded text-[10px] badge-ma250">🛡️ MA250</span>`);
+
+      return badges.length > 0 ? `<div class="flex flex-wrap items-center justify-center gap-1">${badges.join('')}</div>` : '<span class="text-slate-400 text-[10px]">-</span>';
+    }
+
+    const ROW_HEIGHT = 57;
+    const DATE_COL_WIDTH = 96;
+    const FIXED_COLS_WIDTH = 835;
+    const VIRTUAL_BUFFER_V = 20;
+    const VIRTUAL_BUFFER_H = 5;
+
+    let virtualScrollListenerAttached = false;
+    let lastRenderState = {
+      startRow: -1,
+      endRow: -1,
+      startCol: -1,
+      endCol: -1,
+      totalRows: -1,
+      totalDates: -1
+    };
+
+    function initVirtualScroll() {
+      const container = document.getElementById('table-container');
+      if (!container || virtualScrollListenerAttached) return;
+
+      let isTicking = false;
+      container.addEventListener('scroll', () => {
+        if (pageSize < 90000) return;
+        if (!isTicking) {
+          requestAnimationFrame(() => {
+            renderVirtualRows(false);
+            isTicking = false;
+          });
+          isTicking = true;
+        }
+      }, { passive: true });
+
+      virtualScrollListenerAttached = true;
+    }
+
+    function renderVirtualRows(force = false) {
+      const tbody = document.getElementById('table-body');
+      const container = document.getElementById('table-container');
+      if (!tbody || !container) return;
+
+      const total = filteredData.length;
+      document.getElementById('total-filtered').innerText = total.toLocaleString();
+
+      if (total === 0) {
+        tbody.innerHTML = `<tr><td colspan="${7 + activeDates.length}" class="p-8 text-center text-slate-500 font-medium">没有匹配到符合条件的股票及策略因子记录</td></tr>`;
+        document.getElementById('showing-range').innerText = '0 - 0';
+        return;
+      }
+
+      const isVirtualMode = (pageSize >= 90000);
+      const totalDates = activeDates.length;
+
+      let startRow, endRow;
+      let startCol = 0, endCol = totalDates;
+
+      if (!isVirtualMode) {
+        const totalPages = Math.ceil(total / pageSize) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+        document.getElementById('current-page').innerText = currentPage;
+        document.getElementById('total-pages').innerText = totalPages;
+
+        startRow = (currentPage - 1) * pageSize;
+        endRow = Math.min(startRow + pageSize, total);
+        document.getElementById('showing-range').innerText = `${startRow + 1} - ${endRow}`;
+      } else {
+        const scrollTop = container.scrollTop;
+        const scrollLeft = container.scrollLeft;
+        const viewportHeight = container.clientHeight || 800;
+        const viewportWidth = container.clientWidth || 1400;
+
+        // 垂直视口窗口 (按 5 行步长量子化对齐，杜绝每像素微扰重排抖动)
+        const visibleRowCount = Math.ceil(viewportHeight / ROW_HEIGHT);
+        const rawStart = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - VIRTUAL_BUFFER_V);
+        startRow = Math.floor(rawStart / 5) * 5;
+        endRow = Math.min(total, startRow + visibleRowCount + VIRTUAL_BUFFER_V * 2);
+
+        // 横向日期列：全量 90 个交易日直接全部平铺渲染，彻底消除横向虚拟切割导致的“日期未加载”断层
+        startCol = 0;
+        endCol = totalDates;
+
+        document.getElementById('current-page').innerText = '1';
+        document.getElementById('total-pages').innerText = '1';
+        document.getElementById('showing-range').innerText = `${(startRow + 1).toLocaleString()} - ${endRow.toLocaleString()}`;
+      }
+
+      // 智能阈值跳跃检测：如果在安全缓冲区内发生微小滚动且起止索引未变，直接跳过 DOM 重排
+      if (!force &&
+          startRow === lastRenderState.startRow &&
+          endRow === lastRenderState.endRow &&
+          startCol === lastRenderState.startCol &&
+          endCol === lastRenderState.endCol &&
+          total === lastRenderState.totalRows &&
+          totalDates === lastRenderState.totalDates) {
+        return;
+      }
+
+      const colSpanTotal = 7 + totalDates;
+      const topHeight = isVirtualMode ? (startRow * ROW_HEIGHT) : 0;
+      const bottomHeight = isVirtualMode ? ((total - endRow) * ROW_HEIGHT) : 0;
+
+      const leftPad = isVirtualMode ? (startCol * DATE_COL_WIDTH) : 0;
+      const rightPad = isVirtualMode ? ((totalDates - endCol) * DATE_COL_WIDTH) : 0;
+
+      // 如果横向日期列区间发生改变，同步更新表头
+      if (force || startCol !== lastRenderState.startCol || endCol !== lastRenderState.endCol || totalDates !== lastRenderState.totalDates) {
+        renderVirtualHeader(startCol, endCol, leftPad, rightPad);
+      }
+
+      lastRenderState = {
+        startRow,
+        endRow,
+        startCol,
+        endCol,
+        totalRows: total,
+        totalDates
+      };
+
+      const latestDate = activeDates[0] || (datesIndex[0] && datesIndex[0].date);
+      const historyMatrix = (historyMatrixData && historyMatrixData.matrix) ? historyMatrixData.matrix : null;
+
+      const rowsHtmlArr = [];
+      if (topHeight > 0) {
+        rowsHtmlArr.push(`<tr style="height:${topHeight}px;padding:0;margin:0;border:none;"><td colspan="${colSpanTotal}" style="height:${topHeight}px;padding:0;margin:0;border:none;background:transparent;"></td></tr>`);
+      }
+
+      for (let i = startRow; i < endRow; i++) {
+        const item = filteredData[i];
+        const isLatestLabel1 = item.label_latest === 1;
+        const hasFactors = (item.factors && item.factors.active && item.factors.active.length > 0);
+        const cGrp = item.custom_group || '其他';
+        const rowTags = historyMatrix ? historyMatrix[item.code] : null;
+
+        let rowHtml = `<tr class="zebra-row divide-x divide-slate-300 dark:divide-slate-800/50 ${hasFactors ? 'bg-amber-50/40 dark:bg-amber-950/10' : ''}" style="height:${ROW_HEIGHT}px">
+          <td class="py-2 px-2 font-extrabold num-font sticky-col-1 text-blue-900 dark:text-blue-400 w-[80px] min-w-[80px] max-w-[80px]">
+            <div class="flex items-center justify-between gap-1 w-full">
+              <span onclick="openKlineModal('${item.code}', '${(item.name || '').replace(/'/g, "\'")}')" class="cursor-pointer text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline flex items-center gap-0.5 group" title="展开 ${item.name} (${item.code}) K线">
+                <span>${item.code}</span>
+                <svg class="w-3 h-3 opacity-0 group-hover:opacity-100 text-blue-500 transition-opacity inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
+              </span>
+              ${isLatestLabel1 ? '<svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 inline shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>' : ''}
+            </div>
+          </td>
+          <td class="py-2 px-2 font-extrabold text-slate-950 dark:text-slate-100 sticky-col-2 w-[95px] min-w-[95px] max-w-[95px]">
+            <div class="flex items-center justify-between gap-1 w-full">
+              <span onclick="openKlineModal('${item.code}', '${(item.name || '').replace(/'/g, "\'")}')" class="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline truncate max-w-[70px]" title="展开 ${item.name} (${item.code}) K线">${item.name}</span>
+              <button onclick="event.stopPropagation(); openVibeAiDrawer('${item.code}', '${(item.name || '').replace(/'/g, "\'")}', '${latestDate}')" class="text-indigo-600 dark:text-indigo-400 hover:scale-110 transition p-0.5 shrink-0" title="调用 Vibe-Trading AI 深度量化诊断">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2"></path><path d="M20 14h2"></path><path d="M15 13v2"></path><path d="M9 13v2"></path></svg>
+              </button>
+            </div>
+          </td>
+          <td class="py-2 px-2 w-[260px] min-w-[260px] max-w-[260px]">
+            <div class="flex items-center gap-1 flex-wrap">
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-extrabold border ${cGrp === '科技制造层' ? 'bg-blue-100 dark:bg-blue-950/70 border-blue-300 dark:border-blue-800 text-blue-800 dark:text-blue-300' : (cGrp === '民生消费层' ? 'bg-amber-100 dark:bg-amber-950/70 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300' : 'bg-rose-100 dark:bg-rose-950/70 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300')}" title="宏观层级: ${cGrp}">${cGrp}</span>
+              <span class="text-slate-300 font-bold text-[10px]">|</span>
+              <span class="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-[10px] font-bold" title="申万1级: ${item.sw_ind1}">${item.sw_ind1}</span>
+              <span class="text-slate-400 font-bold text-[10px]">/</span>
+              <span class="px-1 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-medium" title="申万2级: ${item.sw_ind2}">${item.sw_ind2}</span>
+              <span class="text-slate-400 font-bold text-[10px]">/</span>
+              <span class="px-1 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold" title="申万3级: ${item.sw_ind3}">${item.sw_ind3}</span>
+            </div>
+          </td>
+          <td class="py-2.5 px-2.5 text-right num-font bg-emerald-50/30 dark:bg-emerald-950/10 w-[85px] min-w-[85px] max-w-[85px]">
+            <span class="font-extrabold text-emerald-700 dark:text-emerald-400 text-xs">${item.adj_close ? item.adj_close.toFixed(2) : '-'}</span>
+          </td>
+          <td class="py-2.5 px-2 text-right num-font font-bold text-slate-600 dark:text-slate-400 w-[75px] min-w-[75px] max-w-[75px]">
+            ${item.raw_close ? item.raw_close.toFixed(2) : '-'}
+          </td>
+          <td class="py-2.5 px-2 text-center w-[160px] min-w-[160px] max-w-[160px]">
+            ${renderFactorBadges(item.factors, item.code, item.name, latestDate)}
+          </td>
+          <td class="py-2.5 px-3 text-center num-font font-extrabold bg-amber-50/50 dark:bg-amber-950/10 w-[80px] min-w-[80px] max-w-[80px]">
+            ${item.streak > 0 ? `<span class="px-2 py-0.5 rounded bg-amber-500 text-white font-extrabold text-[11px] shadow-sm">🔥 ${item.streak} 天</span>` : '<span class="text-slate-400 font-semibold">-</span>'}
+          </td>`;
+
+        if (leftPad > 0) {
+          rowHtml += `<td style="width:${leftPad}px;min-width:${leftPad}px;max-width:${leftPad}px;padding:0;margin:0;border:none;background:transparent;" colspan="${startCol}"></td>`;
+        }
+
+        for (let dIdx = startCol; dIdx < endCol; dIdx++) {
+          const d = activeDates[dIdx];
+          const tid = rowTags ? rowTags[dIdx] : 0;
+          if (tid <= 0) {
+            rowHtml += `<td class="py-2 px-1 text-center border-l border-slate-300 dark:border-slate-800/80 text-slate-400 cal-tag-normal w-[96px] min-w-[96px] max-w-[96px]">-</td>`;
+          } else {
+            const badges = decodeTagMask(tid);
+            if (badges.length === 0) {
+              rowHtml += `<td class="py-2 px-1 text-center border-l border-slate-300 dark:border-slate-800/80 text-slate-400 cal-tag-normal w-[96px] min-w-[96px] max-w-[96px]">-</td>`;
+            } else {
+              const bHtml = badges.map(b => `<span onclick="showFactorDetail('${item.code}', '${(item.name || '').replace(/'/g, "\'")}', '${d}')" class="px-1 py-0.5 rounded ${b.cls} text-[9.5px] inline-block font-bold leading-tight cursor-pointer hover:opacity-90 shadow-sm">${b.text}</span>`).join('');
+              rowHtml += `<td class="py-1.5 px-0.5 text-center border-l border-slate-300 dark:border-slate-800/80 w-[96px] min-w-[96px] max-w-[96px]"><div class="flex flex-wrap items-center justify-center gap-1">${bHtml}</div></td>`;
+            }
+          }
+        }
+
+        if (rightPad > 0) {
+          rowHtml += `<td style="width:${rightPad}px;min-width:${rightPad}px;max-width:${rightPad}px;padding:0;margin:0;border:none;background:transparent;" colspan="${totalDates - endCol}"></td>`;
+        }
+
+        rowHtml += `</tr>`;
+        rowsHtmlArr.push(rowHtml);
+      }
+
+      if (bottomHeight > 0) {
+        rowsHtmlArr.push(`<tr style="height:${bottomHeight}px;padding:0;margin:0;border:none;"><td colspan="${colSpanTotal}" style="height:${bottomHeight}px;padding:0;margin:0;border:none;background:transparent;"></td></tr>`);
+      }
+
+      tbody.innerHTML = rowsHtmlArr.join('');
+    }
+
+    function renderTable() {
+      initVirtualScroll();
+      renderVirtualRows(true);
+    }
+
+async function showFactorDetail(code, name, dateStr) {
+      if (!code) return;
+      currentDetailCode = code;
+      currentKlineCode = code;
+
+      if (!dateStr) dateStr = activeDates[0] || (datesIndex[0] && datesIndex[0].date);
+
+      // 懒加载该日详细切片 (如果未在缓存中，优先极速紧凑格式)
+      if (!dailyCache[dateStr]) {
+        try {
+          const slice = await fetchDailySlice(dateStr);
+          dailyCache[dateStr] = slice;
+          const m = new Map();
+          for (let s of slice) m.set(s.code, s);
+          dailyMapCache[dateStr] = m;
+        } catch(e) {
+          console.warn("Lazy load slice failed for", dateStr, e);
+        }
+      }
+
+      const list = dailyCache[dateStr] || [];
+      const stock = list.find(s => s.code === code) || (dailyMapCache[dateStr] ? dailyMapCache[dateStr].get(code) : null);
+      if (!stock) {
+        console.warn(`未在 ${dateStr} 数据切片中找到股票 ${code}`);
+        return;
+      }
+
+      const masterItem = (typeof masterStockList !== 'undefined') ? masterStockList.find(s => s.code === code) : null;
+      const actualName = (name && name !== code) ? name : (masterItem && masterItem.name ? masterItem.name : (stock.name || ''));
+      currentDetailName = actualName;
+      currentKlineName = actualName;
+
+      const rec = stock.adj || stock;
+      const factors = stock.factors || {};
+      const dt = factors.details || {};
+
+      const titleNamePart = actualName ? ` ${actualName}` : '';
+      document.getElementById('pop-factor-title').innerText = `${code}${titleNamePart} (${dateStr}) - 全量多因子量化特征`;
+
+      const fmtVal = (v, digits = 3) => {
+        if (v === null || v === undefined || v === '' || v === 'null' || isNaN(Number(v))) return '--';
+        return Number(v).toFixed(digits);
+      };
+
+      const adjCloseVal = (stock.adj && stock.adj.close !== undefined) ? stock.adj.close : (stock.adj_close || stock.close);
+      const rawCloseVal = (stock.raw && stock.raw.close !== undefined) ? stock.raw.close : (stock.raw_close || stock.close);
+
+      document.getElementById('pop-factor-close').innerText = `${fmtVal(adjCloseVal, 3)} 元`;
+      document.getElementById('pop-factor-raw-close').innerText = `原始收盘: ${fmtVal(rawCloseVal, 3)} 元`;
+
+      const turnoverVal = Number(stock.turnover) || 0;
+      const turnoverYi = (turnoverVal / 100000000).toFixed(2);
+      document.getElementById('pop-factor-turnover').innerText = `${turnoverYi} 亿元`;
+
+      const cGrp = getCustomGroupForSw1(stock.sw_ind1);
+      document.getElementById('pop-factor-sw-tags').innerHTML = `
+        <span class="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-200 border border-indigo-300">大类: ${cGrp}</span>
+        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">1级: ${stock.sw_ind1 || '未分类'}</span>
+        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">2级: ${stock.sw_ind2 || '未分类'}</span>
+        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 text-emerald-800 dark:text-emerald-300">3级: ${stock.sw_ind3 || '未分类'}</span>
+      `;
+
+      // 1. 5R / HL+5R
+      const isHl5r = factors.factor_hl_5r === 1;
+      const is5r = factors.factor_5r === 1;
+      document.getElementById('pop-5r-status').className = isHl5r ? 'px-2 py-0.5 rounded text-[10px] font-bold badge-hl5r' : (is5r ? 'px-2 py-0.5 rounded text-[10px] font-bold badge-5r' : 'px-2 py-0.5 rounded text-[10px] font-medium bg-slate-200 text-slate-600');
+      document.getElementById('pop-5r-status').innerText = isHl5r ? '⭐ 命中 HL+5R 底部五阳' : (is5r ? '🔴 命中 5R 五连阳' : '未满足连阳');
+
+      document.getElementById('pop-drawdown-180').innerText = dt.drawdown_180_pct !== null && dt.drawdown_180_pct !== undefined ? `${dt.drawdown_180_pct}%` : '--';
+      document.getElementById('pop-rebound-30').innerText = dt.low_rebound_30_pct !== null && dt.low_rebound_30_pct !== undefined ? `${dt.low_rebound_30_pct}%` : '--';
+      document.getElementById('pop-gain-5d').innerText = dt.five_day_gain_pct !== null && dt.five_day_gain_pct !== undefined ? `${dt.five_day_gain_pct}%` : '--';
+
+      // 2. Highs
+      const isAth = factors.factor_high_all === 1;
+      const isH500 = factors.factor_high_500 === 1;
+      const isH250 = factors.factor_high_250 === 1;
+
+      const highEl = document.getElementById('pop-high-status');
+      const hitHighBadges = [];
+      if (isAth) hitHighBadges.push('<span class="px-1.5 py-0.5 rounded text-[10px] font-bold badge-high-all">👑 覆盖期新高</span>');
+      if (isH500) hitHighBadges.push('<span class="px-1.5 py-0.5 rounded text-[10px] font-bold badge-high-500">🔥 500日新高</span>');
+      if (isH250 && !isH500 && !isAth) hitHighBadges.push('<span class="px-1.5 py-0.5 rounded text-[10px] font-bold badge-high-250">⚡ 250日新高</span>');
+      else if (isH250) hitHighBadges.push('<span class="px-1.5 py-0.5 rounded text-[10px] font-bold badge-high-250">⚡ 250日新高</span>');
+
+      if (hitHighBadges.length > 0) {
+        highEl.className = 'flex items-center gap-1.5 flex-wrap';
+        highEl.innerHTML = hitHighBadges.join('');
+      } else {
+        highEl.className = 'px-2 py-0.5 rounded text-[10px] font-medium bg-slate-200 text-slate-600';
+        highEl.innerText = '普通价格区间';
+      }
+
+      document.getElementById('pop-is-ath').innerText = isAth ? '是 (突破覆盖期前高)' : '否';
+      document.getElementById('pop-is-h500').innerText = isH500 ? '是 (突破500有效日前高)' : '否';
+      document.getElementById('pop-is-h250').innerText = isH250 ? '是 (突破250有效日前高)' : '否';
+
+      // 3. AMO / HL+AMO
+      const isHlAmo = factors.factor_hl_amo === 1;
+      const isAmo = factors.factor_amo === 1;
+      document.getElementById('pop-amo-status').className = isHlAmo ? 'px-2 py-0.5 rounded text-[10px] font-bold badge-hlamo' : (isAmo ? 'px-2 py-0.5 rounded text-[10px] font-bold badge-amo' : 'px-2 py-0.5 rounded text-[10px] font-medium bg-slate-200 text-slate-600');
+      document.getElementById('pop-amo-status').innerText = isHlAmo ? '💎 命中 HL+AMO 低位放量' : (isAmo ? '⚡ 命中 AMO 放量突破' : '未满足放量');
+
+      document.getElementById('pop-amt-prev').innerText = dt.amt_ratio_prev ? `${dt.amt_ratio_prev}x` : '--';
+      document.getElementById('pop-amt-max15').innerText = dt.amt_ratio_max15 ? `${dt.amt_ratio_max15}x` : '--';
+      document.getElementById('pop-amt-avg').innerText = `5日:${dt.amt_ratio_ma5 || '-'}x | 10日:${dt.amt_ratio_ma10 || '-'}x | 15日:${dt.amt_ratio_ma15 || '-'}x`;
+      document.getElementById('pop-return-10').innerText = dt.return_10_pct !== null && dt.return_10_pct !== undefined ? `${dt.return_10_pct}%` : '--';
+      const prevDd = dt.prev_drawdown_180_pct;
+      const hasPrevDd = prevDd !== null && prevDd !== undefined && prevDd !== '' && prevDd !== 'null' && !isNaN(Number(prevDd));
+      document.getElementById('pop-prev-drawdown-180').innerText = hasPrevDd ? `${Number(prevDd).toFixed(2)}%` : '--';
+
+      // 4. MA Support
+      const isMa377 = factors.factor_ma377_support === 1;
+      const isMa250 = factors.factor_ma250_support === 1;
+      document.getElementById('pop-ma-supp-status').className = (isMa377 && isMa250) ? 'px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-600 text-white' : (isMa377 ? 'px-2 py-0.5 rounded text-[10px] font-bold badge-ma377' : (isMa250 ? 'px-2 py-0.5 rounded text-[10px] font-bold badge-ma250' : 'px-2 py-0.5 rounded text-[10px] font-medium bg-slate-200 text-slate-600'));
+      document.getElementById('pop-ma-supp-status').innerText = (isMa377 && isMa250) ? '🛡️ 双重支撑 (MA250+MA377)' : (isMa377 ? '🛡️ 命中 MA377 均线支撑' : (isMa250 ? '🛡️ 命中 MA250 均线支撑' : '未触发均线支撑'));
+
+      document.getElementById('pop-dist-ma250').innerText = dt.dist_ma250_pct !== null && dt.dist_ma250_pct !== undefined ? `${dt.dist_ma250_pct}%` : '--';
+      document.getElementById('pop-dist-ma377').innerText = dt.dist_ma377_pct !== null && dt.dist_ma377_pct !== undefined ? `${dt.dist_ma377_pct}%` : '--';
+      document.getElementById('pop-supp-type').innerText = factors.ma_support_type || 'NONE';
+
+      // 5. MA
+      const isLbl = rec.label === 1;
+      document.getElementById('pop-ma-status').className = isLbl ? 'px-2 py-0.5 rounded text-[10px] font-bold badge-ma' : 'px-2 py-0.5 rounded text-[10px] font-medium bg-slate-200 text-slate-600';
+      document.getElementById('pop-ma-status').innerText = isLbl ? '📈 命中均线多头超级排列' : '普通均线形态';
+
+      document.getElementById('pop-ma5').innerText = fmtVal(rec.ma5, 3);
+      document.getElementById('pop-ma10').innerText = fmtVal(rec.ma10, 3);
+      document.getElementById('pop-ma20').innerText = fmtVal(rec.ma20, 3);
+      document.getElementById('pop-ma60').innerText = fmtVal(rec.ma60, 3);
+      document.getElementById('pop-ma120').innerText = fmtVal(rec.ma120, 3);
+      document.getElementById('pop-ma250').innerText = fmtVal(rec.ma250, 3);
+
+      openModal('factor-detail-modal');
+    }
+
+    let currentDetailCode = '';
+    let currentDetailName = '';
+    let currentKlineCode = '';
+    let currentKlineName = '';
+
+    // ==========================================
+    // Custom Industry Management & Excel Handlers
+    // ==========================================
+    let editingCustomMapping = {};
+
+    function openCustomIndustryModal() {
+      editingCustomMapping = {};
+      const allSw1 = Object.keys(swTree).sort();
+      allSw1.forEach(ind => {
+        editingCustomMapping[ind] = getCustomGroupForSw1(ind);
+      });
+      renderCustomIndustryModalTable();
+      document.getElementById('custom-group-status-msg').innerText = '';
+      openModal('custom-industry-modal');
+    }
+
+    function renderCustomIndustryModalTable() {
+      const tbody = document.getElementById('custom-ind-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      const allSw1 = Object.keys(swTree).sort();
+      const groupNames = (customGroupsData && customGroupsData.groups) 
+        ? customGroupsData.groups.map(g => g.name) 
+        : ["科技创造", "民生消费", "资源保障", "制造与周期", "金融与综合"];
+
+      allSw1.forEach((ind, i) => {
+        const curGrp = editingCustomMapping[ind] || getCustomGroupForSw1(ind);
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/40 transition';
+
+        let optionsHtml = '';
+        groupNames.forEach(g => {
+          optionsHtml += `<option value="${g}" ${curGrp === g ? 'selected' : ''}>${g}</option>`;
+        });
+        optionsHtml += `<option value="其他" ${curGrp === '其他' ? 'selected' : ''}>其他</option>`;
+
+        tr.innerHTML = `
+          <td class="py-2 px-3 text-center text-slate-400 num-font">${i + 1}</td>
+          <td class="py-2 px-3 font-bold text-slate-900 dark:text-slate-100">${ind}</td>
+          <td class="py-2 px-3">
+            <span class="px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950/80 border border-indigo-300 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300 font-bold text-xs">${curGrp}</span>
+          </td>
+          <td class="py-2 px-3">
+            <select onchange="updateEditingMapping('${ind}', this.value)" class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">
+              ${optionsHtml}
+            </select>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateEditingMapping(sw1, newGrp) {
+      editingCustomMapping[sw1] = newGrp;
+      renderCustomIndustryModalTable();
+    }
+
+    function downloadExcelTemplate() {
+      if (typeof XLSX === 'undefined') {
+        alert('Excel 引擎正在加载中，请稍候重试！');
+        return;
+      }
+      const allSw1 = Object.keys(swTree).sort();
+      const data = allSw1.map(ind => ({
+        "申万一级行业": ind,
+        "所属产业大类": getCustomGroupForSw1(ind)
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "行业大类映射");
+      XLSX.writeFile(wb, "申万行业宏观大类分类制作模板.xlsx");
+    }
+
+    function exportCustomIndustryExcel() {
+      if (typeof XLSX === 'undefined') {
+        alert('Excel 引擎正在加载中，请稍候重试！');
+        return;
+      }
+      const allSw1 = Object.keys(swTree).sort();
+      const data = allSw1.map(ind => ({
+        "申万一级行业": ind,
+        "所属产业大类": editingCustomMapping[ind] || getCustomGroupForSw1(ind)
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "当前分类配置");
+      XLSX.writeFile(wb, "当前自定义行业宏观分类表.xlsx");
+    }
+
+    function handleExcelImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (typeof XLSX === 'undefined') {
+        alert('Excel 引擎正在加载，请稍后重新选择文件！');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.SheetNames[0];
+          const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet]);
+
+          let matched = 0;
+          rows.forEach(r => {
+            const sw1 = r["申万一级行业"] || r["申万一级"] || r["行业名称"] || r["sw_ind1"] || r["SW_IND1"];
+            const grp = r["所属产业大类"] || r["自定义大类"] || r["产业大类"] || r["大类"] || r["custom_group"];
+            if (sw1 && grp) {
+              const cleanSw1 = String(sw1).trim();
+              const cleanGrp = String(grp).trim();
+              if (cleanSw1 && cleanGrp) {
+                editingCustomMapping[cleanSw1] = cleanGrp;
+                matched++;
+              }
+            }
+          });
+
+          renderCustomIndustryModalTable();
+          document.getElementById('custom-group-status-msg').innerText = `✅ 成功解析 Excel，已匹配更新 ${matched} 个申万一级行业的分类映射！请点击“保存并立即生效”。`;
+        } catch(err) {
+          alert('解析 Excel 文件失败: ' + err.message);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      event.target.value = '';
+    }
+
+    function saveAndApplyCustomGroups() {
+      const mapping = { ...editingCustomMapping };
+      const groupSet = new Set(Object.values(mapping));
+      groupSet.delete('其他');
+      groupSet.delete('未分类');
+
+      const groups = Array.from(groupSet).map(gName => {
+        const swList = Object.keys(mapping).filter(k => mapping[k] === gName);
+        return {
+          name: gName,
+          color: "indigo",
+          sw_ind1: swList
+        };
+      });
+
+      customGroupsData = {
+        groups: groups,
+        mapping: mapping
+      };
+
+      try {
+        localStorage.setItem('ashare_custom_groups', JSON.stringify(customGroupsData));
+      } catch(e) { console.warn("Save to localStorage failed", e); }
+
+      masterStockList.forEach(stock => {
+        stock.custom_group = getCustomGroupForSw1(stock.sw_ind1);
+      });
+
+      populateCustomGroupOptions();
+      updateSw1Options();
+      renderCustomGroupTabs();
+      applyFilters();
+      closeModal('custom-industry-modal');
+    }
+
+    function resetCustomGroupsToDefault() {
+      if (!confirm('确定要恢复系统默认的 3 大宏观层级（科技制造层/民生消费层/资源保障层）吗？')) return;
+      localStorage.removeItem('ashare_custom_groups');
+      customGroupsData = JSON.parse(JSON.stringify(defaultCustomGroups || DEFAULT_CUSTOM_CONFIG));
+      editingCustomMapping = { ...customGroupsData.mapping };
+      renderCustomIndustryModalTable();
+      document.getElementById('custom-group-status-msg').innerText = '已重置为系统默认分类！请点击“保存并立即生效”。';
+    }
+
+    // Modal helpers
+    function openModal(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('hidden');
+    }
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden');
+    }
+    function changePageSize() {
+      pageSize = parseInt(document.getElementById('select-pagesize').value);
+      currentPage = 1;
+      renderTable();
+    }
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        renderTable();
+      }
+    }
+    function nextPage() {
+      const totalPages = Math.ceil(filteredData.length / pageSize) || 1;
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderTable();
+      }
+    }
+    function toggleTheme() {
+      const html = document.documentElement;
+      const isDark = html.classList.toggle('dark');
+      html.classList.toggle('light', !isDark);
+      document.getElementById('theme-icon').setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+      document.getElementById('theme-text').innerText = isDark ? '浅色' : '深色';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // K-Line modal helpers
+    function openKlineModal(code, name) {
+      if (!code) return;
+      currentKlineCode = code;
+      currentKlineName = name || '';
+      currentDetailCode = code;
+      currentDetailName = name || '';
+
+      const modal = document.getElementById('kline-modal');
+      const titleEl = document.getElementById('kline-modal-title');
+      const extLink = document.getElementById('kline-external-link');
+      const loadingEl = document.getElementById('kline-loading');
+      const iframe = document.getElementById('kline-iframe');
+
+      if (titleEl) {
+        titleEl.innerHTML = `
+          <span class="num-font text-blue-600 dark:text-blue-400 font-extrabold">${code}</span>
+          <span>${name || ''}</span>
+          <span class="text-xs font-normal text-slate-500 dark:text-slate-400 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded-full">K 线行情</span>
+        `;
+      }
+
+      const host = window.location.hostname || '127.0.0.1';
+      const klineUrl = `http://${host}:8899/stock/${code}`;
+      if (extLink) extLink.href = klineUrl;
+      if (loadingEl) loadingEl.classList.remove('hidden');
+
+      if (iframe) {
+        iframe.src = klineUrl;
+      }
+
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeKlineModal() {
+      const modal = document.getElementById('kline-modal');
+      if (modal) modal.classList.add('hidden');
+      const iframe = document.getElementById('kline-iframe');
+      if (iframe) iframe.src = 'about:blank';
+    }
+
+    function handleKlineIframeLoaded() {
+      const loadingEl = document.getElementById('kline-loading');
+      if (loadingEl) loadingEl.classList.remove('hidden');
+    }
+
+    function reloadKlineIframe() {
+      if (currentKlineCode) {
+        const loadingEl = document.getElementById('kline-loading');
+        if (loadingEl) loadingEl.classList.remove('hidden');
+        const iframe = document.getElementById('kline-iframe');
+        const host = window.location.hostname || '127.0.0.1';
+        if (iframe) iframe.src = `http://${host}:8899/stock/${currentKlineCode}?t=${Date.now()}`;
+      }
+    }
+
+
+/* ============================================================
+     * Vibe-Trading AI 深度量化诊断联动引擎 (Ashare <-> Vibe-Trading)
+     * ============================================================ */
+    // 统一采用同源反向代理：无论从 127.0.0.1 还是远程 IP (如 http://localhost:8089) 访问，均由 server.py 代理转发至 8899
+    const VIBE_HOST = window.location.origin || '';
+    const VIBE_EXTERNAL_HOST = window.location.origin || '';
+    const VIBE_API_KEY = 'vibe123456';
+
+    let currentAiSessionId = null;
+    let currentAiStockCode = null;
+    let currentAiStockName = null;
+    let currentAiDateStr = null;
+    let isAiGenerating = false;
+    let currentMainReportMarkdown = '';
+    let currentFollowUpQAs = [];
+    let lastGeneratedAiMarkdown = '';
+
+    // 切换思考过程的折叠/展开
+    function toggleThinkingProcess(btn) {
+      const box = btn.closest('.thinking-box');
+      if (!box) return;
+      const textEl = box.querySelector('.thinking-text');
+      const chevron = box.querySelector('.thinking-chevron');
+      const actionText = btn.querySelector('div:last-child span');
+      if (textEl) {
+        const isHidden = textEl.classList.toggle('hidden');
+        if (chevron) {
+          chevron.classList.toggle('rotate-180', !isHidden);
+        }
+        if (actionText) {
+          actionText.innerText = isHidden ? '展开复盘' : '收起';
+        }
+      }
+    }
+
+    // 清洗并彻底分离思考内容与正文内容
+    function cleanAndSeparateThinking(content, reasoning) {
+      let think = (reasoning || '').trim();
+      let main = (content || '').trim();
+
+      // 1. 检查 main 中是否存在 <think>...</think> 标签
+      if (main.includes('<think>')) {
+        const parts = main.split(/<\/?think>/i);
+        if (parts.length >= 3) {
+          if (!think) think = parts[1].trim();
+          main = (parts[0] + parts.slice(2).join('')).trim();
+        } else if (main.startsWith('<think>')) {
+          const endIdx = main.indexOf('</think>');
+          if (endIdx !== -1) {
+            if (!think) think = main.substring(7, endIdx).trim();
+            main = main.substring(endIdx + 8).trim();
+          } else {
+            if (!think) think = main.substring(7).trim();
+            main = '';
+          }
+        }
+      }
+
+      // 2. 避免残留标签
+      main = main.replace(/<\/?think>/gi, '').trim();
+      think = think.replace(/<\/?think>/gi, '').trim();
+
+      return { reasoning: think, content: main };
+    }
+
+    // 通用安全 HTML 转义工具函数，杜绝 XSS 注入
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // 渲染思考卡片 HTML (支持流式中/已完成两种状态)
+    function renderThinkingBoxHtml({ id, reasoning, isStreaming, elapsedSec }) {
+      const boxIdAttr = id ? `id="${id}"` : '';
+      const timerText = elapsedSec ? `已深度思考 ${elapsedSec}` : '思考完成';
+
+      if (isStreaming) {
+        return `
+          <div ${boxIdAttr} class="thinking-box mb-4 rounded-xl border border-indigo-200/90 dark:border-indigo-800/70 bg-gradient-to-br from-indigo-50/70 to-blue-50/40 dark:from-indigo-950/40 dark:to-slate-900/40 overflow-hidden text-xs shadow-xs transition-all">
+            <button type="button" onclick="toggleThinkingProcess(this)" class="w-full px-3.5 py-2.5 flex items-center justify-between font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100/50 dark:hover:bg-indigo-900/40 transition text-left cursor-pointer select-none">
+              <div class="flex items-center gap-2">
+                <i data-lucide="brain-circuit" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-spin-slow shrink-0"></i>
+                <span class="thinking-title font-bold">量化大模型正在深度思考推演...</span>
+                <span class="thinking-timer-badge px-1.5 py-0.5 rounded text-[10px] font-mono bg-indigo-100 dark:bg-indigo-900/80 text-indigo-600 dark:text-indigo-300 font-normal animate-pulse">${escapeHtml(elapsedSec || '0.0s')}</span>
+              </div>
+              <div class="flex items-center gap-1 text-[11px] text-indigo-500 font-normal">
+                <span>收起</span>
+                <i data-lucide="chevron-down" class="thinking-chevron w-3.5 h-3.5 rotate-180 transition-transform duration-200"></i>
+              </div>
+            </button>
+            <div class="thinking-text px-3.5 py-3 border-t border-indigo-100/80 dark:border-indigo-900/50 text-slate-600 dark:text-slate-400 bg-white/80 dark:bg-slate-900/80 font-mono text-[11px] leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">
+              <span class="thinking-stream-content">${escapeHtml(reasoning || '正在构建多因子逻辑与量价微观上下文...')}</span><span class="thinking-stream-cursor inline-block w-1.5 h-3 bg-indigo-600 animate-pulse ml-0.5 align-middle"></span>
+            </div>
+          </div>
+        `;
+      } else {
+        return `
+          <div ${boxIdAttr} class="thinking-box mb-4 rounded-xl border border-indigo-200/70 dark:border-indigo-800/50 bg-indigo-50/40 dark:bg-indigo-950/20 overflow-hidden text-xs shadow-xs transition-all">
+            <button type="button" onclick="toggleThinkingProcess(this)" class="w-full px-3.5 py-2.5 flex items-center justify-between font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100/40 dark:hover:bg-indigo-900/30 transition text-left cursor-pointer select-none">
+              <div class="flex items-center gap-2">
+                <i data-lucide="brain-circuit" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0"></i>
+                <span class="thinking-title">量化大模型深度思考与推演逻辑</span>
+                <span class="thinking-timer-badge px-2 py-0.5 rounded-full text-[10px] font-mono bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-medium flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  <span>${escapeHtml(timerText)}</span>
+                </span>
+              </div>
+              <div class="flex items-center gap-1 text-[11px] text-indigo-500 font-normal">
+                <span>展开复盘</span>
+                <i data-lucide="chevron-down" class="thinking-chevron w-3.5 h-3.5 transition-transform duration-200"></i>
+              </div>
+            </button>
+            <div class="thinking-text hidden px-3.5 py-3 border-t border-indigo-100 dark:border-indigo-900/50 text-slate-600 dark:text-slate-400 bg-white/70 dark:bg-slate-900/70 font-mono text-[11px] leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">
+              <span class="thinking-stream-content">${escapeHtml(reasoning)}</span>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // 默认滚底函数：流式生成期间实时自动滚至底部，确保最新内容与推演始终可见
+    function smartScrollToBottom(el) {
+      if (el) el.scrollTop = el.scrollHeight;
+    }
+
+    // 渲染并自动滚底内部工具卡片容器，确保最新调用的工具始终处于视口中
+    function updateToolsSlotHtml(slotEl, options) {
+      if (!slotEl) return;
+      slotEl.innerHTML = renderToolTrailBoxHtml(options);
+      if (window.lucide) lucide.createIcons();
+      const contentEl = slotEl.querySelector('.tool-trail-content');
+      if (contentEl) {
+        contentEl.scrollTop = contentEl.scrollHeight;
+      }
+    }
+
+    // 折叠/展开 Agent 工具调用明细
+    window.toggleToolTrailBox = function(btn) {
+      const box = btn.closest('#agent-tools-trail-box, [id^="agent-tools-trail-box"]');
+      if (!box) return;
+      const contentEl = box.querySelector('.tool-trail-content');
+      const chevron = box.querySelector('.trail-chevron');
+      const label = box.querySelector('.trail-btn-label');
+      const count = box.getAttribute('data-count') || '';
+      if (contentEl) {
+        const isHidden = contentEl.classList.toggle('hidden');
+        if (chevron) {
+          chevron.classList.toggle('rotate-180', !isHidden);
+        }
+        if (label) {
+          label.innerText = isHidden ? `展开明细 (${count})` : '收起明细';
+        }
+        if (!isHidden) {
+          contentEl.scrollTop = contentEl.scrollHeight;
+        }
+      }
+    };
+
+    // 中文友好金融量化工具全景元数据映射
+    const FINANCIAL_TOOL_META = {
+      'get_alpha_zoo_profile': { name: 'Alpha Zoo 472因子画像与评分', icon: 'sparkles', color: 'indigo' },
+      'get_stock_dragon_tiger': { name: '龙虎榜机构与游资席位', icon: 'zap', color: 'amber' },
+      'get_fund_flow': { name: '主力/超大单资金流向', icon: 'trending-up', color: 'blue' },
+      'get_northbound_flow': { name: '北向资金/陆股通外资流入', icon: 'arrow-down-right', color: 'emerald' },
+      'get_margin_trading': { name: '融资融券两融多空杠杆', icon: 'scale', color: 'purple' },
+      'get_shareholder_count': { name: '股东户数与筹码集中度', icon: 'users', color: 'violet' },
+      'get_block_trades': { name: '大宗交易成交溢折价明细', icon: 'layers', color: 'cyan' },
+      'get_lockup_expiry': { name: '限售股解禁日期与压力', icon: 'calendar-clock', color: 'orange' },
+      'get_financial_statements': { name: '财务三表与核心盈利指标', icon: 'file-spreadsheet', color: 'emerald' },
+      'get_sector_info': { name: '申万行业板块与概念题材联动', icon: 'pie-chart', color: 'rose' },
+      'get_stock_profile': { name: '公司主营业务与基本资料', icon: 'building-2', color: 'blue' },
+      'get_institutional_holdings': { name: '公募/社保/QFII机构持仓', icon: 'landmark', color: 'teal' },
+      'get_stock_news': { name: '核心公告与舆情新闻', icon: 'newspaper', color: 'indigo' },
+      'technical_indicators': { name: 'MACD/RSI/布林带技术指标', icon: 'activity', color: 'violet' },
+    };
+
+    // 渲染 Agent 工具调用轨迹（支持折叠/展开、异常准确显示与紧凑排版）
+    function renderToolTrailBoxHtml({ id, items, isRunning, defaultCollapsed }) {
+      if (!items || items.length === 0) return '';
+      
+      const successCount = items.filter(i => i.status === 'done' && i.ok !== false && !String(i.summary || '').includes('异常') && !String(i.summary || '').includes('失败')).length;
+      const errorCount = items.filter(i => i.status === 'error' || i.ok === false || String(i.summary || '').includes('异常') || String(i.summary || '').includes('失败')).length;
+      const runningCount = items.filter(i => i.status === 'running').length;
+
+      // 默认折叠策略：如果已完成且工具较多(>=3)，或者显式指定折叠，则默认折叠
+      const isCollapsed = defaultCollapsed !== undefined ? defaultCollapsed : (!isRunning && items.length >= 3);
+
+      const itemsHtml = items.map((item, idx) => {
+        const meta = FINANCIAL_TOOL_META[item.tool] || { name: escapeHtml(item.tool), icon: 'wrench', color: 'slate' };
+        const isError = item.status === 'error' || item.ok === false || String(item.summary || '').includes('异常') || String(item.summary || '').includes('失败');
+        const isDone = (item.status === 'done' || (!isRunning && item.status !== 'running')) && !isError;
+        
+        const statusBadge = isError
+          ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/80 flex items-center gap-1"><i data-lucide="alert-circle" class="w-2.5 h-2.5"></i>异常</span>`
+          : isDone
+          ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80 flex items-center gap-1"><i data-lucide="check" class="w-2.5 h-2.5"></i>已获取</span>`
+          : `<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 animate-pulse flex items-center gap-1"><i data-lucide="loader-2" class="w-2.5 h-2.5 animate-spin"></i>执行中</span>`;
+
+        return `
+          <div class="relative pl-5 pb-2 last:pb-0 group">
+            <div class="absolute left-2 top-2 bottom-0 w-0.5 bg-slate-200 dark:bg-slate-800 group-last:hidden"></div>
+            <div class="absolute left-1 top-1.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-900 ${isError ? 'bg-red-500' : isDone ? 'bg-emerald-500' : 'bg-blue-500 animate-ping'}"></div>
+            <div class="bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 rounded-lg p-1.5 text-xs shadow-2xs space-y-0.5">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <i data-lucide="${meta.icon}" class="w-3.5 h-3.5 text-${meta.color}-600 dark:text-${meta.color}-400"></i>
+                  <span>${escapeHtml(meta.name)}</span>
+                </span>
+                ${statusBadge}
+              </div>
+              <div class="text-[11px] ${isError ? 'text-red-600 dark:text-red-400 font-mono text-[10px]' : 'text-slate-600 dark:text-slate-400'} flex items-center justify-between gap-2">
+                <span class="truncate">${escapeHtml(item.summary) || (isDone ? '数据解析完成' : '正在从金融数据中枢检索...')}</span>
+                ${item.args ? `<span class="font-mono text-[9px] text-slate-400 shrink-0">入参: ${escapeHtml(JSON.stringify(item.args))}</span>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div id="${id || 'agent-tools-trail-box'}" data-count="${items.length}" class="my-2 p-2.5 bg-indigo-50/40 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 rounded-xl space-y-1.5 transition-all">
+          <div class="flex items-center justify-between text-xs text-indigo-900 dark:text-indigo-200 font-bold">
+            <div class="flex items-center gap-2">
+              <i data-lucide="cpu" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
+              <span>量化数据链 (${items.length})</span>
+              <div class="flex items-center gap-1 text-[10px] font-normal">
+                ${successCount ? `<span class="px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 font-medium">${successCount} 就绪</span>` : ''}
+                ${errorCount ? `<span class="px-1.5 py-0.2 rounded bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 font-medium">${errorCount} 异常</span>` : ''}
+                ${runningCount ? `<span class="px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 animate-pulse font-medium">${runningCount} 调度中</span>` : ''}
+              </div>
+            </div>
+            <button onclick="toggleToolTrailBox(this)" class="flex items-center gap-1 text-[11px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 bg-white/90 dark:bg-slate-900/90 hover:bg-white px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800 shadow-2xs font-medium cursor-pointer transition-all">
+              <span class="trail-btn-label">${isCollapsed ? `展开明细 (${items.length})` : '收起明细'}</span>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 trail-chevron transition-transform duration-200 ${isCollapsed ? '' : 'rotate-180'}"></i>
+            </button>
+          </div>
+          <div class="tool-trail-content pt-1 max-h-56 overflow-y-auto space-y-1 pr-1 ${isCollapsed ? 'hidden' : ''}">
+            ${itemsHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    // 格式化思考过程、工具调用与正文组合
+    function formatAiResponseWithThinking(content, reasoning, elapsedSec, toolTrails) {
+      const parsed = cleanAndSeparateThinking(content, reasoning);
+      if (!parsed.content && parsed.reasoning) {
+        parsed.content = parsed.reasoning;
+        parsed.reasoning = '';
+      }
+      let html = '';
+      if (parsed.reasoning) {
+        html += renderThinkingBoxHtml({
+          reasoning: parsed.reasoning,
+          isStreaming: false,
+          elapsedSec: elapsedSec
+        });
+      }
+      if (toolTrails && toolTrails.length > 0) {
+        html += renderToolTrailBoxHtml({
+          items: toolTrails,
+          isRunning: false
+        });
+      }
+      html += `<div class="ai-main-content leading-relaxed text-xs text-slate-800 dark:text-slate-200 space-y-3">${formatMarkdownToHtml(parsed.content || '')}</div>`;
+      return html;
+    }
+
+    // 格式化富文本 Markdown 投研报告（极简专业金融文档排版，支持高质感纯净表格与 Callout 提示块）
+    function formatMarkdownToHtml(md) {
+      if (!md) return '';
+      // 1. 彻底移除 think 标签及其内部思考文本
+      let raw = md.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<\/?think>/gi, '').trim();
+      if (!raw) return '';
+
+      // 2. 前置智能标准化修复（仅针对独立的标题/列表/提示块进行轻量折行归一化，严禁对带 | 的表格行进行粗暴替换）
+      raw = raw.replace(/^(\-{3,}|\*{3,})\s*(#{1,4})/gm, '$1\n\n$2 ');
+      raw = raw.replace(/([^\n\r|])\s*(#{1,4}\s+)/g, '$1\n\n$2');
+      raw = raw.replace(/\|\|\s*/g, '|\n| ');
+      raw = raw.replace(/([。！？；])\s*([\-\*•]\s+)/g, '$1\n$2');
+      raw = raw.replace(/([。！？；])\s*(\d+\.\s+)/g, '$1\n$2');
+      raw = raw.replace(/([。！？；\n])\s*(&gt;|>)\s*([💡⚠️⭐📌🔔])/g, '$1\n\n> $3');
+
+      // 3. HTML 安全转义辅助函数
+      const escapeText = (str) => {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      };
+
+      // 4. 行内元素格式化 (Inline parser)
+      const parseInline = (text) => {
+        let out = escapeText(text);
+        // 加粗 **text**
+        out = out.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-slate-900 dark:text-slate-100">$1</strong>');
+        // 斜体 *text*
+        out = out.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em class="italic text-slate-700 dark:text-slate-300">$2</em>');
+        // 行内代码 `code`
+        out = out.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-[11px] border border-slate-200/80 dark:border-slate-700/80">$1</code>');
+        return out;
+      };
+
+      // 判断一行是否属于表格行（支持标准以 | 开头/结尾、分隔行及容错表格行）
+      const isTableLine = (line) => {
+        const t = line.trim();
+        if (!t) return false;
+        if (t.startsWith('|')) return true;
+        if (/^[\:\-\s|]+$/.test(t) && (t.includes('-') || t.includes(':') || t.includes('|'))) return true;
+        if (t.split('|').length >= 2 && !t.startsWith('#') && !t.startsWith('>') && !/^[\-\*]\s+/.test(t) && !/^\d+\.\s+/.test(t)) {
+          return true;
+        }
+        return false;
+      };
+
+      // 5. 将 Markdown 按行扫描并进行状态机 Block 解析
+      const lines = raw.split(/\r?\n/);
+      const blocks = [];
+      let i = 0;
+
+      while (i < lines.length) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        // 5.1 空行跳过
+        if (!trimmed) {
+          i++;
+          continue;
+        }
+
+        // 5.2 分割线 --- 或 ***
+        if (/^(\-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+          blocks.push('<hr class="my-4 border-slate-200/80 dark:border-slate-800" />');
+          i++;
+          continue;
+        }
+
+        // 5.3 标题 Headings (#, ##, ###, ####)
+        const headingMatch = trimmed.match(/^(#{1,4})\s+(.*)$/);
+        if (headingMatch) {
+          const level = headingMatch[1].length;
+          const text = parseInline(headingMatch[2]);
+          if (level === 1) {
+            blocks.push(`<h1 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 mt-5 mb-2.5 pb-1.5 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">${text}</h1>`);
+          } else if (level === 2) {
+            blocks.push(`<h2 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 mt-4 mb-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-2"><span class="w-1.5 h-3.5 rounded bg-indigo-600 dark:bg-indigo-500 inline-block shrink-0"></span><span>${text}</span></h2>`);
+          } else if (level === 3) {
+            blocks.push(`<h3 class="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-3 mb-1.5 flex items-center gap-1.5 text-indigo-700 dark:text-indigo-400"><span>▫️</span><span>${text}</span></h3>`);
+          } else {
+            blocks.push(`<h4 class="text-xs font-medium text-slate-700 dark:text-slate-300 mt-2 mb-1">${text}</h4>`);
+          }
+          i++;
+          continue;
+        }
+
+        // 5.4 表格 Table (| col1 | col2 ...)
+        if (isTableLine(trimmed)) {
+          const tableLines = [];
+          while (i < lines.length && isTableLine(lines[i])) {
+            tableLines.push(lines[i].trim());
+            i++;
+          }
+          if (tableLines.length >= 1) {
+            let tableHtml = '<div class="overflow-x-auto my-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 shadow-2xs">';
+            tableHtml += '<table class="w-full text-xs text-left border-collapse">';
+            
+            let headerParsed = false;
+            let alignments = [];
+
+            for (let t = 0; t < tableLines.length; t++) {
+              const tRow = tableLines[t];
+              // 检查是否为分隔行，比如 |:---|---:| 或 :--- | ---: 或 : | :--- | ---:
+              if (/^\|?[\s\-:|]+\|?$/.test(tRow) && (tRow.includes('-') || tRow.includes(':'))) {
+                const rawAligns = tRow.replace(/^\|/, '').replace(/\|$/, '').split('|');
+                alignments = rawAligns.map(a => {
+                  const s = a.trim();
+                  if (s.startsWith(':') && s.endsWith(':')) return 'text-center';
+                  if (s.endsWith(':')) return 'text-right';
+                  return 'text-left';
+                });
+                continue;
+              }
+
+              const rawCells = tRow.split('|');
+              if (tRow.startsWith('|')) rawCells.shift();
+              if (tRow.endsWith('|') && rawCells.length > 0) rawCells.pop();
+              const cells = rawCells.map(c => c.trim());
+
+              if (!headerParsed && t === 0) {
+                tableHtml += '<thead class="bg-slate-50 dark:bg-slate-800/80 font-bold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-800 text-[11px]"><tr>';
+                cells.forEach((c, idx) => {
+                  const align = alignments[idx] || 'text-left';
+                  tableHtml += `<th class="px-3.5 py-2.5 ${align}">${parseInline(c)}</th>`;
+                });
+                tableHtml += '</tr></thead><tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans text-xs">';
+                headerParsed = true;
+              } else {
+                tableHtml += '<tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">';
+                cells.forEach((c, idx) => {
+                  const align = alignments[idx] || (
+                    /^[\+\-]?[\d\.]+%?$/.test(c) ? 'text-right font-mono text-[11px]' : 'text-left'
+                  );
+                  const isMono = (idx === 1 || idx === 2) && /^[a-zA-Z0-9_\-\*\s\(\)\/]+$/.test(c);
+                  const monoClass = isMono ? 'font-mono text-[11px] text-slate-600 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300';
+                  tableHtml += `<td class="px-3.5 py-2.5 ${align} ${monoClass}">${parseInline(c)}</td>`;
+                });
+                tableHtml += '</tr>';
+              }
+            }
+            tableHtml += '</tbody></table></div>';
+            blocks.push(tableHtml);
+            continue;
+          }
+        }
+
+        // 5.5 引用与 Callout 提示块 (> ...)
+        if (trimmed.startsWith('>') || trimmed.startsWith('&gt;')) {
+          const rawQuoteLines = [];
+          while (i < lines.length && (lines[i].trim().startsWith('>') || lines[i].trim().startsWith('&gt;'))) {
+            const ql = lines[i].trim().replace(/^(&gt;|>)\s?/, '');
+            rawQuoteLines.push(ql);
+            i++;
+          }
+
+          // 展开嵌套的 <br> 或粘连编号项
+          const expandedLines = [];
+          rawQuoteLines.forEach(l => {
+            const s = l.replace(/<br\s*\/?>/gi, '\n');
+            const normalized = s.replace(/([。！？；])\s*(\d+\.\s+)/g, '$1\n$2');
+            normalized.split(/\r?\n/).forEach(item => {
+              const tr = item.trim();
+              if (tr) expandedLines.push(tr);
+            });
+          });
+
+          const firstLine = expandedLines[0] || '';
+          const isSuggestion = firstLine.includes('💡') || firstLine.includes('建议') || firstLine.includes('策略');
+          const isWarning = !isSuggestion && (firstLine.includes('⚠️') || firstLine.includes('风控') || firstLine.includes('风险') || firstLine.includes('注意') || expandedLines.some(l => l.includes('⚠️')));
+
+          const formattedLines = expandedLines.map((line, idx) => {
+            let clean = line.replace(/^[\s💡⚠️📌🔔⭐\uFE0F\u200D]+/g, '').trim();
+            const out = parseInline(clean);
+            if (idx === 0 && (clean.includes('建议') || clean.includes('风控') || clean.includes('警示') || clean.includes('策略'))) {
+              return `<div class="font-bold text-slate-900 dark:text-slate-100 pb-1 border-b border-indigo-200/50 dark:border-indigo-800/40 mb-1.5">${out}</div>`;
+            }
+            return `<div>${out}</div>`;
+          });
+
+          if (isSuggestion) {
+            blocks.push(`
+              <div class="my-3 p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-950 dark:text-indigo-200 text-xs leading-relaxed flex items-start gap-2.5">
+                <span class="shrink-0 text-sm mt-0.5 select-none">💡</span>
+                <div class="space-y-1.5 w-full">${formattedLines.join('')}</div>
+              </div>
+            `);
+          } else if (isWarning) {
+            blocks.push(`
+              <div class="my-3 p-3.5 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20 text-amber-950 dark:text-amber-200 text-xs leading-relaxed flex items-start gap-2.5">
+                <span class="shrink-0 text-sm mt-0.5 select-none">⚠️</span>
+                <div class="space-y-1.5 w-full">${formattedLines.join('')}</div>
+              </div>
+            `);
+          } else {
+            blocks.push(`
+              <blockquote class="my-3 pl-3.5 py-2 border-l-2 border-indigo-500 text-slate-600 dark:text-slate-300 text-xs leading-relaxed bg-slate-50/60 dark:bg-slate-800/30 rounded-r space-y-1">
+                ${formattedLines.join('')}
+              </blockquote>
+            `);
+          }
+          continue;
+        }
+
+        // 5.6 列表 Lists (- / * / 1.)
+        if (/^[\-\*]\s+/.test(trimmed) || /^\d+\.\s+/.test(trimmed)) {
+          const isOrdered = /^\d+\.\s+/.test(trimmed);
+          const listItems = [];
+          while (i < lines.length) {
+            const l = lines[i].trim();
+            if (isOrdered && /^\d+\.\s+(.*)$/.test(l)) {
+              listItems.push(l.replace(/^\d+\.\s+/, ''));
+              i++;
+            } else if (!isOrdered && /^[\-\*]\s+(.*)$/.test(l)) {
+              listItems.push(l.replace(/^[\-\*]\s+/, ''));
+              i++;
+            } else {
+              break;
+            }
+          }
+          const tag = isOrdered ? 'ol' : 'ul';
+          const listClass = isOrdered ? 'list-decimal space-y-1.5 my-2 pl-5 text-xs text-slate-700 dark:text-slate-300 leading-relaxed' : 'list-disc space-y-1.5 my-2 pl-5 text-xs text-slate-700 dark:text-slate-300 leading-relaxed';
+          const itemsHtml = listItems.map(item => `<li>${parseInline(item)}</li>`).join('');
+          blocks.push(`<${tag} class="${listClass}">${itemsHtml}</${tag}>`);
+          continue;
+        }
+
+        // 5.7 常规段落 (Paragraph) - 必须严格保证 i 推进，绝对杜绝死循环
+        const pLines = [];
+        while (i < lines.length) {
+          const curTrimmed = lines[i].trim();
+          if (!curTrimmed) break;
+          if (curTrimmed.startsWith('#') || isTableLine(curTrimmed) || curTrimmed.startsWith('>') || curTrimmed.startsWith('&gt;') || /^[\-\*]\s+/.test(curTrimmed) || /^\d+\.\s+/.test(curTrimmed) || /^(\-{3,}|\*{3,}|_{3,})$/.test(curTrimmed)) {
+            break;
+          }
+          pLines.push(curTrimmed);
+          i++;
+        }
+        if (pLines.length > 0) {
+          blocks.push(`<p class="my-2 leading-relaxed text-xs text-slate-700 dark:text-slate-300">${parseInline(pLines.join(' '))}</p>`);
+        } else {
+          blocks.push(`<p class="my-2 leading-relaxed text-xs text-slate-700 dark:text-slate-300">${parseInline(trimmed)}</p>`);
+          i++;
+        }
+      }
+
+      return blocks.join('\n');
+    }
+
+    // 提取并构建结构化 5 维量化投研 Prompt
+    function buildStockAiPrompt(code, name, dateStr) {
+      const list = dailyCache[dateStr] || [];
+      const stock = list.find(s => s.code === code) || (dailyMapCache[dateStr] ? dailyMapCache[dateStr].get(code) : {}) || {};
+      const rec = stock.adj || stock;
+      const factors = stock.factors || {};
+      const dt = factors.details || {};
+
+      const fmtP = (v) => {
+        if (v === null || v === undefined || v === '' || v === 'null' || isNaN(Number(v))) return '-';
+        return Number(v).toFixed(2);
+      };
+
+      const adjClose = (stock.adj && stock.adj.close !== undefined) ? stock.adj.close : (stock.adj_close || stock.close || '--');
+      const rawClose = (stock.raw && stock.raw.close !== undefined) ? stock.raw.close : (stock.raw_close || stock.close || '--');
+      const turnoverYi = stock.turnover ? (Number(stock.turnover) / 100000000).toFixed(2) : '--';
+
+      const hitFactors = [];
+      if (factors.factor_hl_5r === 1) hitFactors.push("【⭐ HL+5R 底部五阳反转】");
+      if (factors.factor_5r === 1) hitFactors.push("【🔴 5R 五连阳启动】");
+      if (factors.factor_high_all === 1) hitFactors.push("【👑 覆盖期历史新高 HIGH_ALL】");
+      if (factors.factor_high_500 === 1) hitFactors.push("【🔥 500日有效新高 HIGH_500】");
+      if (factors.factor_high_250 === 1) hitFactors.push("【⚡ 250日年线新高 HIGH_250】");
+      if (factors.factor_hl_amo === 1) hitFactors.push("【💎 HL+AMO 低位放量】");
+      if (factors.factor_amo === 1) hitFactors.push("【⚡ AMO 成交额放量突破】");
+      if (factors.factor_ma377_support === 1) hitFactors.push("【🛡️ MA377 均线支撑】");
+      if (factors.factor_ma250_support === 1) hitFactors.push("【🛡️ MA250 年线支撑】");
+      if (rec.label === 1) hitFactors.push("【📈 均线多头超级顺向排列】");
+
+      const factorSummary = hitFactors.length > 0 ? hitFactors.join(" ") : "当前未触发特殊形态（普通价格波动区间）";
+
+      return `请作为顶级金融量化分析助理，针对 A 股标的【${code} ${name}】在交易日【${dateStr}】的微观量化特征与多因子信号，生成一份全方位的深度投研诊断报告：
+
+### 一、行情与量化特征上下文
+- **标的名称**: ${name} (${code})
+- **交易日期**: ${dateStr}
+- **申万行业**: 一级[${stock.sw_ind1 || '--'}] / 二级[${stock.sw_ind2 || '--'}] / 三级[${stock.sw_ind3 || '--'}]
+- **价格与成交**: 前复权收盘价 ${fmtP(adjClose)} 元，原始收盘价 ${fmtP(rawClose)} 元，当日成交额 ${turnoverYi} 亿元
+- **核心策略因子命中**: ${factorSummary}
+- **关键衍生指标**: 
+  - 前180日高点回调幅度(HL+5R): ${dt.drawdown_180_pct !== undefined && dt.drawdown_180_pct !== null ? dt.drawdown_180_pct + '%' : '--'}
+  - 前180日高点回撤幅度(HL+AMO): ${dt.prev_drawdown_180_pct !== undefined && dt.prev_drawdown_180_pct !== null ? dt.prev_drawdown_180_pct + '%' : '--'}
+  - 近30日低点反弹幅度: ${dt.low_rebound_30_pct !== undefined && dt.low_rebound_30_pct !== null ? dt.low_rebound_30_pct + '%' : '--'}
+  - 5日实体累计涨幅: ${dt.five_day_gain_pct !== undefined ? dt.five_day_gain_pct + '%' : '--'}
+  - 成交额倍数: 较昨日 ${dt.amt_ratio_prev || '-'}x | 较前15日最大 ${dt.amt_ratio_max15 || '-'}x | 较前5/10/15日均量 [${dt.amt_ratio_ma5 || '-'}/${dt.amt_ratio_ma10 || '-'}/${dt.amt_ratio_ma15 || '-'}]x
+  - 均线偏离度: 距离MA250年线 ${dt.dist_ma250_pct !== undefined ? dt.dist_ma250_pct + '%' : '--'} | 距离MA377均线 ${dt.dist_ma377_pct !== undefined ? dt.dist_ma377_pct + '%' : '--'}
+- **MA 均线矩阵**: MA5=${fmtP(rec.ma5)}, MA10=${fmtP(rec.ma10)}, MA20=${fmtP(rec.ma20)}, MA60=${fmtP(rec.ma60)}, MA120=${fmtP(rec.ma120)}, MA250=${fmtP(rec.ma250)}, MA377=${fmtP(rec.ma377)}
+
+---
+
+### 二、输出报告规范（请严格按以下 4 大核心章节输出结构化 Markdown）：
+1. **## 一、Alpha Zoo 多因子量化画像与综合评分**（必须包含规范的 6 列因子 Markdown 表格，并提炼 Top 3 多空因子与综合评分）；
+2. **## 二、量价形态与微观结构推演**（深度解析触发因子的技术面逻辑、均线矩阵第一/第二支撑阻力位与筹码结构）；
+3. **## 三、基本面财务与资金席位交叉印证**（交叉分析主力资金流向、龙虎榜席位与股东户数筹码集中度）；
+4. **## 四、交易操作策略与风控止损位**（使用 \`> 💡 操作建议: ...\` 给出精准建仓/加仓/减仓点位，使用 \`> ⚠️ 风控警示: ...\` 明确关键破位止损线）。`;
+    }
+
+    async function openVibeAiDrawer(code, name, dateStr) {
+      if (!code) return;
+      if (!name) name = code;
+      if (!dateStr) dateStr = activeDates[0];
+
+      closeModal('factor-detail-modal');
+      closeModal('kline-modal');
+
+      currentAiSessionId = null;
+      currentAiStockCode = code;
+      currentAiStockName = name;
+      currentAiDateStr = dateStr;
+      currentMainReportMarkdown = '';
+      currentFollowUpQAs = [];
+      lastGeneratedAiMarkdown = '';
+
+      const drawer = document.getElementById('vibe-ai-drawer');
+      const drawerOverlay = document.getElementById('vibe-ai-drawer-overlay');
+      drawer.classList.remove('translate-x-full');
+      drawerOverlay.classList.remove('hidden');
+
+      document.getElementById('vibe-ai-stock-title').innerText = `${code} ${name}`;
+      document.getElementById('vibe-ai-stock-date').innerText = `交易日: ${dateStr}`;
+      document.getElementById('vibe-ai-status-text').innerText = '正在启动量化 Agent...';
+      document.getElementById('vibe-ai-status-indicator').className = 'w-2 h-2 rounded-full bg-blue-500 animate-pulse';
+
+      // 提取股票数据
+      const list = dailyCache[dateStr] || [];
+      const stock = list.find(s => s.code === code) || {};
+      const adjClose = (stock.adj && stock.adj.close !== undefined) ? stock.adj.close : (stock.adj_close || stock.close || '--');
+      const turnoverYi = stock.turnover ? (stock.turnover / 100000000).toFixed(2) : '--';
+      document.getElementById('vibe-ai-header-stats').innerHTML = `
+        <div class="flex items-center gap-3 text-xs num-font">
+          <span>收盘: <strong class="text-emerald-600 dark:text-emerald-400 font-bold">${typeof adjClose === 'number' ? adjClose.toFixed(2) : adjClose} 元</strong></span>
+          <span>成交: <strong class="text-blue-600 dark:text-blue-400 font-bold">${turnoverYi} 亿</strong></span>
+          <span class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px]">${stock.sw_ind1 || '-'} / ${stock.sw_ind2 || '-'}</span>
+        </div>
+      `;
+
+      const prompt = buildStockAiPrompt(code, name, dateStr);
+      const contentEl = document.getElementById('vibe-ai-report-body');
+
+      // 初始化独立分段容器与槽位
+      const thinkBoxId = 'primary-thinking-box';
+      contentEl.innerHTML = `
+        <div id="ai-sectioned-container" class="space-y-3">
+          <!-- 1. 独立思考推演卡片槽位 -->
+          <div id="ai-thinking-slot">
+            ${renderThinkingBoxHtml({ id: thinkBoxId, reasoning: '', isStreaming: true, elapsedSec: '0.0s' })}
+          </div>
+          <!-- 2. 独立 Agent 工具调用轨迹槽位 -->
+          <div id="ai-tools-slot"></div>
+          <!-- 3. 独立研报正文槽位 -->
+          <div id="ai-content-slot" class="ai-main-content leading-relaxed text-xs text-slate-800 dark:text-slate-200 space-y-3"></div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+
+      isAiGenerating = true;
+      const startTime = Date.now();
+      let thinkElapsedSec = '0.0s';
+      let thinkFinished = false;
+
+      // 启动思考秒表计时器
+      const timerInterval = setInterval(() => {
+        if (!thinkFinished) {
+          const currentSec = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+          thinkElapsedSec = currentSec;
+          const badge = document.querySelector(`#${thinkBoxId} .thinking-timer-badge`);
+          if (badge) badge.innerText = currentSec;
+        }
+      }, 100);
+
+      try {
+        const analyzeRes = await fetch(`${VIBE_HOST}/api/ashare/analyze`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${VIBE_API_KEY}`
+          },
+          body: JSON.stringify({
+            title: `[量化研报] ${code} ${name} (${dateStr})`,
+            message: prompt
+          })
+        });
+
+        if (!analyzeRes.ok) {
+          throw new Error(`AI 推理请求失败 (HTTP ${analyzeRes.status})`);
+        }
+
+        document.getElementById('vibe-ai-status-text').innerText = 'Agent 正在调用工具与推演...';
+        document.getElementById('vibe-ai-status-indicator').className = 'w-2 h-2 rounded-full bg-indigo-500 animate-ping';
+
+        const reader = analyzeRes.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+        let accumulatedReasoning = '';
+        let accumulatedContent = '';
+        let toolTrails = [];
+        let isStreamDone = false;
+
+        const thinkingSlot = document.getElementById('ai-thinking-slot');
+        const toolsSlot = document.getElementById('ai-tools-slot');
+        const contentSlot = document.getElementById('ai-content-slot');
+
+        while (!isStreamDone) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data:')) continue;
+            const dataStr = trimmed.slice(5).trim();
+            if (dataStr === '[DONE]') {
+              isStreamDone = true;
+              break;
+            }
+
+            try {
+              const parsed = JSON.parse(dataStr);
+              if (parsed.session_id) currentAiSessionId = parsed.session_id;
+
+              // 0. 重置内容事件 (当工具调用触发前若有临时文本则重置)
+              if (parsed.event === 'reset_content') {
+                accumulatedContent = '';
+                if (contentSlot) contentSlot.innerHTML = '';
+              }
+
+              // 1. 处理思考增量
+              if (parsed.reasoning_delta) {
+                accumulatedReasoning += parsed.reasoning_delta;
+                const liveTextEl = thinkingSlot ? thinkingSlot.querySelector('.thinking-stream-content') : null;
+                if (liveTextEl) {
+                  liveTextEl.textContent = accumulatedReasoning;
+                  const container = liveTextEl.parentElement;
+                  if (container) smartScrollToBottom(container);
+                }
+                smartScrollToBottom(contentEl);
+              }
+
+              // 2. 处理 Tool Call 事件
+              if (parsed.event === 'tool_call') {
+                const existingIdx = toolTrails.findIndex(t => t.tool_id === parsed.tool_id);
+                if (existingIdx === -1) {
+                  toolTrails.push({
+                    tool: parsed.tool,
+                    args: parsed.args,
+                    tool_id: parsed.tool_id,
+                    status: 'running',
+                    summary: '正在调用量化工具检索数据...'
+                  });
+                }
+                if (toolsSlot) {
+                  updateToolsSlotHtml(toolsSlot, { items: toolTrails, isRunning: true, defaultCollapsed: false });
+                }
+                smartScrollToBottom(contentEl);
+              }
+
+              // 3. 处理 Tool Result 事件 (工具执行过程中全程保持展开)
+              if (parsed.event === 'tool_result') {
+                const isOk = parsed.ok !== false && !String(parsed.summary || '').includes('异常') && !String(parsed.summary || '').includes('失败') && parsed.status !== 'error';
+                const target = toolTrails.find(t => t.tool_id === parsed.tool_id) || toolTrails.find(t => t.tool === parsed.tool);
+                if (target) {
+                  target.status = isOk ? 'done' : 'error';
+                  target.ok = isOk;
+                  target.summary = parsed.summary || (isOk ? '数据已同步' : '工具执行异常');
+                  target.data = parsed.data;
+                } else {
+                  toolTrails.push({
+                    tool: parsed.tool,
+                    summary: parsed.summary || (isOk ? '数据已同步' : '工具执行异常'),
+                    data: parsed.data,
+                    ok: isOk,
+                    status: isOk ? 'done' : 'error'
+                  });
+                }
+                if (toolsSlot) {
+                  updateToolsSlotHtml(toolsSlot, { items: toolTrails, isRunning: true, defaultCollapsed: false });
+                }
+                smartScrollToBottom(contentEl);
+              }
+
+              // 4. 处理正文增量（此时所有工具调用已完成，正式折叠工具栏并输出报告）
+              if (parsed.content_delta !== undefined && parsed.content_delta !== null && parsed.content_delta.length > 0) {
+                const hasRunningTools = toolTrails.some(t => t.status === 'running');
+                if (!thinkFinished && !hasRunningTools) {
+                  thinkFinished = true;
+                  clearInterval(timerInterval);
+                  thinkElapsedSec = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+
+                  // 工具全部完成，优雅折叠工具栏
+                  if (toolsSlot && toolTrails.length > 0) {
+                    updateToolsSlotHtml(toolsSlot, { items: toolTrails, isRunning: false, defaultCollapsed: true });
+                  }
+
+                  if (thinkingSlot && accumulatedReasoning.trim()) {
+                    thinkingSlot.innerHTML = renderThinkingBoxHtml({
+                      id: thinkBoxId,
+                      reasoning: accumulatedReasoning,
+                      isStreaming: false,
+                      elapsedSec: thinkElapsedSec
+                    });
+                  } else if (thinkingSlot && !accumulatedReasoning.trim()) {
+                    thinkingSlot.innerHTML = '';
+                  }
+                  if (window.lucide) lucide.createIcons();
+                }
+
+                accumulatedContent += parsed.content_delta;
+                if (contentSlot) {
+                  contentSlot.innerHTML = formatMarkdownToHtml(accumulatedContent) + `
+                    <span class="inline-block w-1.5 h-3.5 bg-indigo-600 dark:bg-indigo-400 animate-pulse ml-0.5 align-middle"></span>
+                  `;
+                  smartScrollToBottom(contentEl);
+                }
+              }
+            } catch (e) {}
+          }
+        }
+
+        try { await reader.cancel(); } catch(e) {}
+        thinkFinished = true;
+        clearInterval(timerInterval);
+
+        const cleaned = cleanAndSeparateThinking(accumulatedContent, accumulatedReasoning);
+        if (!cleaned.content && cleaned.reasoning) {
+          cleaned.content = cleaned.reasoning;
+          cleaned.reasoning = '';
+        }
+        currentMainReportMarkdown = cleaned.content;
+        currentFollowUpQAs = [];
+        lastGeneratedAiMarkdown = cleaned.content;
+
+        contentEl.innerHTML = formatAiResponseWithThinking(cleaned.content, cleaned.reasoning, thinkElapsedSec, toolTrails);
+        document.getElementById('vibe-ai-status-text').innerText = 'AI 诊断完成';
+        document.getElementById('vibe-ai-status-indicator').className = 'w-2 h-2 rounded-full bg-emerald-500';
+        if (window.lucide) lucide.createIcons();
+      } catch (err) {
+        clearInterval(timerInterval);
+        console.error('Vibe AI Error:', err);
+        contentEl.innerHTML = `
+          <div class="p-4 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 space-y-2 text-xs">
+            <div class="font-bold flex items-center gap-1.5 text-sm">
+              <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+              <span>无法连接到 Vibe-Trading 服务</span>
+            </div>
+            <p>错误详情: ${err.message}</p>
+            <p class="text-[11px] text-slate-500">请确保远程服务器上的 Vibe-Trading 服务已启动并在后台运行 (端口: 8899)。</p>
+            <button onclick="openVibeAiDrawer('${code}', '${name}', '${dateStr}')" class="mt-2 px-3 py-1 bg-red-600 text-white rounded font-bold hover:bg-red-500 cursor-pointer">重试</button>
+          </div>
+        `;
+        document.getElementById('vibe-ai-status-text').innerText = '连接异常';
+        document.getElementById('vibe-ai-status-indicator').className = 'w-2 h-2 rounded-full bg-red-500';
+        if (window.lucide) lucide.createIcons();
+      } finally {
+        clearInterval(timerInterval);
+        isAiGenerating = false;
+      }
+    }
+
+    function openVibeAiDrawerFromDetail() {
+      const code = currentDetailCode || currentKlineCode;
+      const name = currentDetailName || currentKlineName;
+      if (code) {
+        openVibeAiDrawer(code, name, activeDates[0]);
+      }
+    }
+
+    function openVibeAiDrawerFromKline() {
+      const code = currentKlineCode || currentDetailCode;
+      const name = currentKlineName || currentDetailName;
+      if (code) {
+        openVibeAiDrawer(code, name, activeDates[0]);
+      }
+    }
+
+    function closeVibeAiDrawer() {
+      document.getElementById('vibe-ai-drawer').classList.add('translate-x-full');
+      document.getElementById('vibe-ai-drawer-overlay').classList.add('hidden');
+    }
+
+    // 在抽屉内发送追加提问 (支持思考过程、工具调用与回复过程严格分段与独立秒表)
+    async function sendAiFollowUpQuestion() {
+      const inputEl = document.getElementById('vibe-ai-input');
+      const question = (inputEl.value || '').trim();
+      if (!question) return;
+
+      if (isAiGenerating) {
+        const oldPh = inputEl.placeholder;
+        inputEl.placeholder = 'AI 正在深度思考中，请稍候…';
+        setTimeout(() => { inputEl.placeholder = oldPh; }, 2000);
+        return;
+      }
+
+      inputEl.value = '';
+      const contentEl = document.getElementById('vibe-ai-report-body');
+
+      const timeTag = Date.now();
+      const bubbleId = `ai-chat-bubble-${timeTag}`;
+      const thinkBoxId = `followup-thinking-box-${timeTag}`;
+      const thinkSlotId = `ai-followup-think-slot-${timeTag}`;
+      const toolsSlotId = `ai-followup-tools-slot-${timeTag}`;
+      const contentSlotId = `ai-followup-content-slot-${timeTag}`;
+
+      // 插入用户提问气泡与 AI 分段卡片容器
+      contentEl.innerHTML += `
+        <div class="my-4 flex justify-end">
+          <div class="bg-blue-600 text-white rounded-2xl rounded-tr-xs px-4 py-2.5 text-xs max-w-[85%] shadow-sm leading-relaxed">
+            ${question.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+          </div>
+        </div>
+        <div id="${bubbleId}" class="my-4 flex justify-start">
+          <div class="w-full bg-slate-50 dark:bg-slate-900/60 rounded-2xl rounded-tl-xs p-4 text-xs border border-slate-200 dark:border-slate-800 shadow-xs space-y-3 text-slate-800 dark:text-slate-200">
+            <!-- 追问思考卡片槽位 -->
+            <div id="${thinkSlotId}">
+              ${renderThinkingBoxHtml({ id: thinkBoxId, reasoning: '', isStreaming: true, elapsedSec: '0.0s' })}
+            </div>
+            <!-- 追问工具调用槽位 -->
+            <div id="${toolsSlotId}"></div>
+            <!-- 追问正文槽位 -->
+            <div id="${contentSlotId}" class="space-y-2 leading-relaxed"></div>
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+      contentEl.scrollTop = contentEl.scrollHeight;
+      isAiGenerating = true;
+
+      document.getElementById('vibe-ai-status-text').innerText = '正在推演追问答复...';
+      document.getElementById('vibe-ai-status-indicator').className = 'w-2 h-2 rounded-full bg-indigo-500 animate-ping';
+
+      const startTime = Date.now();
+      let thinkElapsedSec = '0.0s';
+      let thinkFinished = false;
+
+      const timerInterval = setInterval(() => {
+        if (!thinkFinished) {
+          const currentSec = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+          thinkElapsedSec = currentSec;
+          const badge = document.querySelector(`#${thinkBoxId} .thinking-timer-badge`);
+          if (badge) badge.innerText = currentSec;
+        }
+      }, 100);
+
+      try {
+        const payloadBody = {
+          message: question
+        };
+        if (currentAiSessionId) {
+          payloadBody.session_id = currentAiSessionId;
+        } else if (currentAiStockCode) {
+          payloadBody.title = `[量化追问] ${currentAiStockCode} ${currentAiStockName || ''}`;
+        }
+
+        const chatRes = await fetch(`${VIBE_HOST}/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${VIBE_API_KEY}`
+          },
+          body: JSON.stringify(payloadBody)
+        });
+
+        if (!chatRes.ok) throw new Error(`HTTP ${chatRes.status}`);
+
+        const reader = chatRes.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+        let accumulatedReasoning = '';
+        let accumulatedContent = '';
+        let followupTools = [];
+        let isStreamDone = false;
+
+        const thinkSlot = document.getElementById(thinkSlotId);
+        const toolsSlot = document.getElementById(toolsSlotId);
+        const contentSlot = document.getElementById(contentSlotId);
+
+        while (!isStreamDone) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data:')) continue;
+            const dataStr = trimmed.slice(5).trim();
+            if (dataStr === '[DONE]') {
+              isStreamDone = true;
+              break;
+            }
+
+            try {
+              const parsed = JSON.parse(dataStr);
+              if (parsed.session_id) currentAiSessionId = parsed.session_id;
+
+              // 0. 重置内容事件
+              if (parsed.event === 'reset_content') {
+                accumulatedContent = '';
+                if (contentSlot) contentSlot.innerHTML = '';
+              }
+
+              // 1. 思考增量
+              if (parsed.reasoning_delta) {
+                accumulatedReasoning += parsed.reasoning_delta;
+                const liveTextEl = thinkSlot ? thinkSlot.querySelector('.thinking-stream-content') : null;
+                if (liveTextEl) {
+                  liveTextEl.textContent = accumulatedReasoning;
+                  const container = liveTextEl.parentElement;
+                  if (container) smartScrollToBottom(container);
+                }
+                smartScrollToBottom(contentEl);
+              }
+
+              // 2. 追问 Tool Call 事件
+              if (parsed.event === 'tool_call') {
+                const existingIdx = followupTools.findIndex(t => t.tool_id === parsed.tool_id);
+                if (existingIdx === -1) {
+                  followupTools.push({
+                    tool: parsed.tool,
+                    args: parsed.args,
+                    tool_id: parsed.tool_id,
+                    status: 'running',
+                    summary: '正在按需调用量化工具检索...'
+                  });
+                }
+                if (toolsSlot) {
+                  updateToolsSlotHtml(toolsSlot, { items: followupTools, isRunning: true, defaultCollapsed: false });
+                }
+                smartScrollToBottom(contentEl);
+              }
+
+              // 3. 追问 Tool Result 事件 (执行过程中全程保持展开)
+              if (parsed.event === 'tool_result') {
+                const isOk = parsed.ok !== false && !String(parsed.summary || '').includes('异常') && !String(parsed.summary || '').includes('失败') && parsed.status !== 'error';
+                const target = followupTools.find(t => t.tool_id === parsed.tool_id) || followupTools.find(t => t.tool === parsed.tool);
+                if (target) {
+                  target.status = isOk ? 'done' : 'error';
+                  target.ok = isOk;
+                  target.summary = parsed.summary || (isOk ? '数据已同步' : '工具执行异常');
+                  target.data = parsed.data;
+                } else {
+                  followupTools.push({
+                    tool: parsed.tool,
+                    summary: parsed.summary || (isOk ? '数据已同步' : '工具执行异常'),
+                    data: parsed.data,
+                    ok: isOk,
+                    status: isOk ? 'done' : 'error'
+                  });
+                }
+                if (toolsSlot) {
+                  updateToolsSlotHtml(toolsSlot, { items: followupTools, isRunning: true, defaultCollapsed: false });
+                }
+                smartScrollToBottom(contentEl);
+              }
+
+              // 4. 正文增量（此时追问工具全部调用完毕，正式折叠并输出回答）
+              if (parsed.content_delta !== undefined && parsed.content_delta !== null && parsed.content_delta.length > 0) {
+                const hasRunningTools = followupTools.some(t => t.status === 'running');
+                if (!thinkFinished && !hasRunningTools) {
+                  thinkFinished = true;
+                  clearInterval(timerInterval);
+                  thinkElapsedSec = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+
+                  // 工具全部完成，优雅折叠工具栏
+                  if (toolsSlot && followupTools.length > 0) {
+                    updateToolsSlotHtml(toolsSlot, { items: followupTools, isRunning: false, defaultCollapsed: true });
+                  }
+
+                  if (thinkSlot && accumulatedReasoning.trim()) {
+                    thinkSlot.innerHTML = renderThinkingBoxHtml({
+                      id: thinkBoxId,
+                      reasoning: accumulatedReasoning,
+                      isStreaming: false,
+                      elapsedSec: thinkElapsedSec
+                    });
+                  } else if (thinkSlot && !accumulatedReasoning.trim()) {
+                    thinkSlot.innerHTML = '';
+                  }
+                  if (window.lucide) lucide.createIcons();
+                }
+
+                accumulatedContent += parsed.content_delta;
+                if (contentSlot) {
+                  contentSlot.innerHTML = formatMarkdownToHtml(accumulatedContent) + `
+                    <span class="inline-block w-1.5 h-3.5 bg-indigo-600 dark:bg-indigo-400 animate-pulse ml-0.5 align-middle"></span>
+                  `;
+                  smartScrollToBottom(contentEl);
+                }
+              }
+            } catch (e) {}
+          }
+        }
+
+        try { await reader.cancel(); } catch(e) {}
+        thinkFinished = true;
+        clearInterval(timerInterval);
+
+        const cleaned = cleanAndSeparateThinking(accumulatedContent, accumulatedReasoning);
+        if (!cleaned.content && cleaned.reasoning) {
+          cleaned.content = cleaned.reasoning;
+          cleaned.reasoning = '';
+        }
+        if (cleaned.content) {
+          currentFollowUpQAs.push({
+            question: question,
+            answer: cleaned.content
+          });
+        }
+
+        const bubbleContainer = document.getElementById(bubbleId);
+        if (bubbleContainer) {
+          bubbleContainer.innerHTML = `
+            <div class="w-full bg-slate-50 dark:bg-slate-900/60 rounded-2xl rounded-tl-xs p-4 text-xs border border-slate-200 dark:border-slate-800 shadow-xs space-y-3 text-slate-800 dark:text-slate-200">
+              ${formatAiResponseWithThinking(cleaned.content, cleaned.reasoning, thinkElapsedSec, followupTools)}
+            </div>
+          `;
+          if (window.lucide) lucide.createIcons();
+        }
+        document.getElementById('vibe-ai-status-text').innerText = 'AI 诊断完成';
+        document.getElementById('vibe-ai-status-indicator').className = 'w-2 h-2 rounded-full bg-emerald-500';
+      } catch (err) {
+        clearInterval(timerInterval);
+        console.error('Follow-up Chat Error:', err);
+        const bubbleContainer = document.getElementById(bubbleId);
+        if (bubbleContainer) {
+          bubbleContainer.innerHTML = `
+            <div class="w-full bg-red-50 dark:bg-red-950/40 rounded-2xl rounded-tl-xs p-4 text-xs border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 space-y-1">
+              <div class="font-bold flex items-center gap-1.5"><i data-lucide="alert-circle" class="w-4 h-4"></i>追问回复失败</div>
+              <p>${err.message}</p>
+            </div>
+          `;
+          if (window.lucide) lucide.createIcons();
+        }
+        document.getElementById('vibe-ai-status-text').innerText = '追问异常';
+        document.getElementById('vibe-ai-status-indicator').className = 'w-2 h-2 rounded-full bg-red-500';
+      } finally {
+        clearInterval(timerInterval);
+        isAiGenerating = false;
+      }
+    }
+
+    function setQuickQuestion(text) {
+      const inputEl = document.getElementById('vibe-ai-input');
+      if (inputEl) {
+        inputEl.value = text;
+        sendAiFollowUpQuestion();
+      }
+    }
+
+    /**
+     * 将当前股票 AI 深度量化诊断研报导出为机构级原生 Word (.docx) 格式
+     */
+    async function exportVibeAiReportToWord() {
+      const code = currentAiStockCode;
+      const name = currentAiStockName;
+      const dateStr = currentAiDateStr;
+
+      if (!code || !name) {
+        alert('请先选择股票并生成 AI 诊断研报');
+        return;
+      }
+
+      // 提取研报正文
+      const reportBodyEl = document.getElementById('vibe-ai-report-body');
+      if (!reportBodyEl) return;
+
+      const mainContentEl = reportBodyEl.querySelector('#ai-content-slot') || reportBodyEl.querySelector('.ai-main-content');
+      const rawHtml = mainContentEl ? mainContentEl.innerHTML.trim() : '';
+
+      if (!lastGeneratedAiMarkdown && (!rawHtml || rawHtml.includes('正在启动量化') || (rawHtml.length < 50 && isAiGenerating))) {
+        alert('AI 诊断研报正在生成中或内容为空，请稍等生成完毕后再导出。');
+        return;
+      }
+
+      // 获取标的行情报表元数据
+      const list = (typeof dailyCache !== 'undefined' && dailyCache[dateStr]) ? dailyCache[dateStr] : [];
+      const stock = list.find(s => s.code === code) || {};
+      const adjClose = (stock.adj && stock.adj.close !== undefined) ? stock.adj.close : (stock.adj_close || stock.close || '--');
+      const closeStr = typeof adjClose === 'number' ? `${adjClose.toFixed(2)} 元` : (adjClose || '--');
+      const turnoverYi = stock.turnover ? `${(stock.turnover / 100000000).toFixed(2)} 亿元` : '--';
+      const industry = `${stock.sw_ind1 || '-'} / ${stock.sw_ind2 || '-'}`;
+
+      const btn = document.getElementById('vibe-ai-export-btn');
+      const origHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-indigo-600"></i><span>正在生成 Word...</span>`;
+        if (window.lucide) lucide.createIcons();
+      }
+
+      try {
+        let fullExportMarkdown = currentMainReportMarkdown || lastGeneratedAiMarkdown || '';
+        if (!fullExportMarkdown && mainContentEl) {
+          fullExportMarkdown = mainContentEl.innerText || '';
+        }
+
+        if (currentFollowUpQAs && currentFollowUpQAs.length > 0) {
+          fullExportMarkdown += '\n\n---\n\n## 五、多轮策略推演与追问答疑\n';
+          currentFollowUpQAs.forEach((qa, idx) => {
+            fullExportMarkdown += `\n### 追问 ${idx + 1}：${qa.question}\n\n> 💬 **投资者追问：**\n> ${qa.question}\n\n${qa.answer}\n`;
+          });
+        }
+
+        const payload = {
+          code: code,
+          name: name,
+          date: dateStr,
+          content: fullExportMarkdown,
+          stats: {
+            close: closeStr,
+            turnover: turnoverYi,
+            industry: industry
+          }
+        };
+
+        const res = await fetch(`${VIBE_HOST}/api/ashare/export-docx`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer vibe123456'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          throw new Error('导出服务返回异常: ' + res.status);
+        }
+
+        const blob = await res.blob();
+        const cleanName = name.replace(/[\s\*\/\\]/g, '_');
+        const filename = `【AI量化研报】${code}_${cleanName}_${dateStr}.docx`;
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+
+        if (btn) {
+          btn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i><span class="text-emerald-600 font-bold">已导出</span>`;
+          if (window.lucide) lucide.createIcons();
+          setTimeout(() => {
+            btn.innerHTML = origHtml;
+            if (window.lucide) lucide.createIcons();
+          }, 2000);
+        }
+      } catch (err) {
+        console.error('Export docx error:', err);
+        if (btn) {
+          btn.innerHTML = origHtml;
+          if (window.lucide) lucide.createIcons();
+        }
+        alert('导出 Word 研报失败: ' + err.message);
+      }
+    }
+
+  </script>
+
+  <!-- ============================================================ -->
+  <!-- Vibe-Trading AI 深度量化诊断右侧抽屉组件 (AI Research Drawer)  -->
+  <!-- ============================================================ -->
+  <div id="vibe-ai-drawer-overlay" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden transition-opacity" onclick="closeVibeAiDrawer()"></div>
+  <div id="vibe-ai-drawer" class="fixed top-0 right-0 h-full w-full max-w-xl sm:max-w-2xl bg-white dark:bg-[#0b1019] border-l border-slate-200 dark:border-slate-800 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col overflow-hidden">
+    <!-- Drawer Header -->
+    <div class="px-5 py-3.5 bg-slate-100 dark:bg-[#0f172a] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold shadow">
+          <i data-lucide="bot" class="w-5 h-5 text-amber-300"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 id="vibe-ai-stock-title" class="text-sm font-extrabold text-slate-900 dark:text-slate-100">--</h3>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">Vibe-Trading 联动</span>
+          </div>
+          <p id="vibe-ai-stock-date" class="text-[11px] text-slate-500 dark:text-slate-400">交易日: --</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="vibe-ai-export-btn" onclick="exportVibeAiReportToWord()" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/60 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-700 shadow-2xs transition cursor-pointer" title="将当前研报导出为 Word (.doc) 文档">
+          <i data-lucide="file-down" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400"></i>
+          <span>导出 Word</span>
+        </button>
+        <button onclick="closeVibeAiDrawer()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer" title="关闭抽屉">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Status & Stock Brief Strip -->
+    <div class="px-5 py-2 bg-slate-50 dark:bg-[#121927] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+      <div id="vibe-ai-header-stats" class="text-xs"></div>
+      <div class="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+        <span id="vibe-ai-status-indicator" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span id="vibe-ai-status-text">就绪</span>
+      </div>
+    </div>
+
+    <!-- Drawer Content (Scrollable Report Body) -->
+    <div id="vibe-ai-report-body" class="flex-1 overflow-y-auto px-5 py-4 space-y-3 text-xs leading-relaxed">
+      <!-- 动态渲染分析结果 -->
+    </div>
+
+    <!-- Quick Question Tags -->
+    <div class="px-4 py-2 bg-slate-50 dark:bg-[#0f172a] border-t border-slate-200 dark:border-slate-800/60 flex items-center gap-1.5 overflow-x-auto shrink-0">
+      <span class="text-[10px] text-slate-400 shrink-0">快捷追问:</span>
+      <button onclick="setQuickQuestion('若明日跌破 MA20 均线，该如何应对与止损？')" class="px-2 py-0.5 rounded-full text-[10px] bg-slate-200 dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-slate-700 dark:text-slate-300 shrink-0">跌破MA20如何应对？</button>
+      <button onclick="setQuickQuestion('分析该股在所属申万行业的估值与成长性地位')" class="px-2 py-0.5 rounded-full text-[10px] bg-slate-200 dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-slate-700 dark:text-slate-300 shrink-0">行业地位与估值</button>
+      <button onclick="setQuickQuestion('根据当前量价特征，给出明日具体的操作建议与关键点位')" class="px-2 py-0.5 rounded-full text-[10px] bg-slate-200 dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-slate-700 dark:text-slate-300 shrink-0">明日关键点位</button>
+    </div>
+
+    <!-- Drawer Bottom Input Bar (Multi-turn Chat) -->
+    <div class="p-3 bg-white dark:bg-[#0f172a] border-t border-slate-200 dark:border-slate-800 flex items-center gap-2 shrink-0">
+      <input id="vibe-ai-input" type="text" placeholder="向 Vibe-Trading 智能体继续追问（如策略回测、止损点位）…" class="flex-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-800 dark:text-slate-200" onkeydown="if(event.key==='Enter') sendAiFollowUpQuestion()"/>
+      <button onclick="sendAiFollowUpQuestion()" class="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold shadow transition flex items-center gap-1 shrink-0">
+        <i data-lucide="send" class="w-3.5 h-3.5"></i>
+        <span>发送</span>
+      </button>
+    </div>
+  </div>
+</body>
+</html>

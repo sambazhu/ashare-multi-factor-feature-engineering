@@ -1,0 +1,86 @@
+# ============================================================
+# Ashare Multi-Factor Feature Engineering - Git Ignore Rules
+# ============================================================
+
+# macOS / Editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Local runtime & Agent state
+/.agents/
+/.gstack/
+/logs/
+*.log
+server.log
+
+# Credentials & Sensitive Configurations (DO NOT COMMIT)
+.env
+.env.local
+/CODEX_BRIEFING.md
+/CODEX_HANDOFF.md
+
+# Private Ops & Server Mount Scripts (internal machine specific)
+mount_*.sh
+mount_*.py
+
+# Temporary Hotfix Patches & Debug/Probe Scripts
+patch_*.py
+probe_*.py
+debug_*.py
+fix_*.py
+inspect_*.py
+check_oracle_dates.py
+restore_vibe_ai.py
+update_index_*.py
+update_clean.py
+update_show_all.py
+update_title_detail.py
+update_server_compact.py
+apply_*.py
+
+# Backups and Scratch files
+*.bak*
+*.bak_*
+index.html.bak*
+stitch_a.zip
+stitch_a_unpacked/
+
+# Screenshots and Test Images
+*.png
+
+# Generated Market Data Artifacts & Slices (Large assets >10MB excluded)
+/data
+/data_versions/
+/data_backup*/
+/data_legacy_*/
+/data_tmp/
+/data_symlink_*
+/ma_features_*.csv
+/ma_bullish_result.csv
+/stock_features_data.js
+/sw_industry_map.json
+/stock_profiles_summary.json
+/stock_basic_index.json
+/sw_custom_group.json
+
+
+# Vibe-Trading Subdirectory Rules
+vibe-trading/**/.env*
+!vibe-trading/**/.env.example
+vibe-trading/**/node_modules/
+vibe-trading/**/.venv*
+vibe-trading/**/*.log
+vibe-trading/**/__pycache__/
+vibe-trading/**/*.py[cod]
+

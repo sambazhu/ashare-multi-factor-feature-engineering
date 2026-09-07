@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Ashare Vibe AI - A 股产业链图谱与上下游客户全景分析系统</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <!-- Tailwind CSS, Lucide Icons & ECharts 5 -->
+  <script src="vendor/tailwind.js"></script>
+  <script src="vendor/lucide.js"></script>
+  <script src="vendor/echarts.min.js"></script>
+  <script>
+    if (typeof tailwind !== 'undefined') {
+      tailwind.config = {
+        darkMode: 'class',
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    
+    html.light {
+      --bg-main: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-header: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --chart-bg: #f8fafc;
+    }
+    
+    html.dark {
+      --bg-main: #06090e;
+      --bg-card: #0d131f;
+      --bg-header: #0b1019;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #1e293b;
+      --chart-bg: #0b1019;
+    }
+    
+    html.light body { background-color: #f8fafc; color: #0f172a; }
+    html.dark body { background-color: #06090e; color: #f8fafc; }
+    
+    html.light ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    html.dark ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+    .num-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans transition-colors duration-150">
+
+  <!-- 顶部 Header Navigation -->
+  <div class="bg-white dark:bg-[#0b1019] border-b border-slate-200 dark:border-slate-800/80 px-4 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-sm sticky top-0 z-40">
+    <div class="flex items-center gap-3">
+      <a href="index.html" class="p-2 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 rounded-lg text-white shadow-md hover:opacity-90 transition">
+        <i data-lucide="network" class="w-5 h-5 text-emerald-100"></i>
+      </a>
+      <div>
+        <h1 class="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <span class="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent font-extrabold tracking-wide">Ashare Vibe AI</span>
+          <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-semibold">A 股全市场产业链图谱与上下游分析</span>
+        </h1>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-3">
+          <span>覆盖股票: <strong id="headerStockCount" class="text-emerald-700 dark:text-emerald-400 font-extrabold num-font text-xs">5,214 家在市 A 股</strong></span>
+          <span>•</span>
+          <span>数据口径: <strong class="text-blue-600 dark:text-blue-400 font-semibold">聚源审计底表 + 标的物穿透 + 申万2021 (31大类)</strong></span>
+          <span>•</span>
+          <span id="loadStatusText" class="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i> 数据已就绪</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- 顶部搜索与控制栏 -->
+    <div class="flex items-center gap-2 text-xs flex-wrap">
+      
+      <!-- 搜索输入框 -->
+      <div class="relative w-64 md:w-80">
+        <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
+        <input 
+          id="globalSearchInput" 
+          type="text" 
+          placeholder="搜索代码 / 名称 / 行业 / 国家电网 / 比亚迪 / 小米..." 
+          class="w-full bg-slate-100 dark:bg-[#121927] border border-slate-300 dark:border-slate-700 rounded-lg pl-8 pr-7 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition"
+        />
+        <button id="clearSearchBtn" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i data-lucide="x" class="w-3.5 h-3.5"></i>
+        </button>
+        <!-- 下拉联想框 -->
+        <div id="searchDropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white dark:bg-[#0d131f] border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50 max-h-80 overflow-y-auto"></div>
+      </div>
+
+      <!-- 选股看板入口 -->
+      <a href="index.html" class="flex items-center gap-1 bg-blue-50 hover:bg-blue-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-blue-700 dark:text-slate-200 px-2.5 py-1.5 rounded-lg transition border border-blue-200 dark:border-slate-700 font-medium shadow-sm">
+        <i data-lucide="table-2" class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"></i>
+        <span>选股与多因子看板</span>
+      </a>
+
+      <!-- 主题切换按钮 -->
+      <button onclick="toggleTheme()" class="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 px-2.5 py-1.5 rounded-lg transition border border-slate-300 dark:border-slate-700 font-medium">
+        <i id="theme-icon" data-lucide="moon" class="w-3.5 h-3.5 text-slate-600 dark:text-amber-400"></i>
+        <span id="theme-text">深色</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 主体工作区 -->
+  <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+    
+    <!-- 左侧行业赛道侧边栏 (340px) -->
+    <aside class="w-full lg:w-[340px] border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0b1019] flex flex-col flex-shrink-0">
+      
+      <!-- 1. 自定义 5 大产业大类 Tab 切换栏 -->
+      <div class="p-2.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-[#080d14]">
+        <div class="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+          <span class="flex items-center gap-1"><i data-lucide="layout-grid" class="w-3.5 h-3.5 text-emerald-500"></i> 产业大类联动分析</span>
+          <span id="activeGroupCount" class="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-bold">全部 (5,214)</span>
+        </div>
+        <div class="grid grid-cols-3 gap-1" id="categoryGroupTabs">
+          <button onclick="selectCategoryGroup('ALL')" id="tab_ALL" class="cat-tab px-2 py-1 rounded text-center text-xs font-semibold bg-emerald-600 text-white shadow-sm transition">
+            全部大类
+          </button>
+          <button onclick="selectCategoryGroup('科技创造')" id="tab_科技创造" class="cat-tab px-2 py-1 rounded text-center text-xs font-medium bg-white dark:bg-[#121927] hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 transition">
+            科技创造
+          </button>
+          <button onclick="selectCategoryGroup('民生消费')" id="tab_民生消费" class="cat-tab px-2 py-1 rounded text-center text-xs font-medium bg-white dark:bg-[#121927] hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 transition">
+            民生消费
+          </button>
+          <button onclick="selectCategoryGroup('资源保障')" id="tab_资源保障" class="cat-tab px-2 py-1 rounded text-center text-xs font-medium bg-white dark:bg-[#121927] hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 transition">
+            资源保障
+          </button>
+          <button onclick="selectCategoryGroup('制造与周期')" id="tab_制造与周期" class="cat-tab px-2 py-1 rounded text-center text-xs font-medium bg-white dark:bg-[#121927] hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 transition">
+            制造周期
+          </button>
+          <button onclick="selectCategoryGroup('金融与综合')" id="tab_金融与综合" class="cat-tab px-2 py-1 rounded text-center text-xs font-medium bg-white dark:bg-[#121927] hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 transition">
+            金融综合
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. 实名核心产业链热搜标签 -->
+      <div class="p-2.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-[#080d14]">
+        <div class="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+          <span class="flex items-center gap-1.5"><i data-lucide="flame" class="w-3.5 h-3.5 text-rose-500"></i> 实名大客户穿透热搜</span>
+          <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">100% 真实直供</span>
+        </div>
+        <div class="flex flex-wrap gap-1" id="chainHotTags">
+          <button onclick="filterByTag('国家电网')" class="px-2 py-0.5 rounded bg-white dark:bg-[#121927] hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-500 text-[11px] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium transition shadow-sm active:scale-95 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> 国家电网
+          </button>
+          <button onclick="filterByTag('比亚迪')" class="px-2 py-0.5 rounded bg-white dark:bg-[#121927] hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-500 text-[11px] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium transition shadow-sm active:scale-95 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> 比亚迪
+          </button>
+          <button onclick="filterByTag('宁德时代')" class="px-2 py-0.5 rounded bg-white dark:bg-[#121927] hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-500 text-[11px] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium transition shadow-sm active:scale-95 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> 宁德时代
+          </button>
+          <button onclick="filterByTag('华为')" class="px-2 py-0.5 rounded bg-white dark:bg-[#121927] hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-500 text-[11px] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium transition shadow-sm active:scale-95 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> 华为
+          </button>
+          <button onclick="filterByTag('小米')" class="px-2 py-0.5 rounded bg-white dark:bg-[#121927] hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-500 text-[11px] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium transition shadow-sm active:scale-95 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span> 小米
+          </button>
+          <button onclick="filterByTag('海尔')" class="px-2 py-0.5 rounded bg-white dark:bg-[#121927] hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:border-emerald-500 text-[11px] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium transition shadow-sm active:scale-95 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span> 海尔
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. 申万一级行业列表头 (严格 31 大类) -->
+      <div class="px-3 py-1.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-100/60 dark:bg-[#0d131f]">
+        <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+          <i data-lucide="layers" class="w-3.5 h-3.5 text-blue-500"></i> 所属申万一级行业
+        </span>
+        <span id="filteredIndCountBadge" class="text-[10px] bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-1.5 py-0.2 rounded font-mono font-bold">31 个行业</span>
+      </div>
+
+      <!-- 行业分类树状列表容器 -->
+      <div class="flex-1 overflow-y-auto p-2 space-y-1" id="industryTreeList">
+        <div class="text-center py-10 text-xs text-slate-400 flex items-center justify-center gap-2">
+          <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-emerald-500"></i>
+          <span>正在加载分类...</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 右侧主图谱与深度画像大舞台 -->
+    <main class="flex-1 flex flex-col overflow-y-auto p-4 lg:p-5 space-y-4 bg-[#f8fafc] dark:bg-[#06090e]">
+      
+      <!-- 当前选中股票概览 Banner -->
+      <div class="bg-white dark:bg-[#0d131f] border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <h2 id="currStockName" class="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+              -- <span id="currStockCode" class="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">--</span>
+            </h2>
+            <span id="currStockCompany" class="text-xs text-slate-500 dark:text-slate-400 border-l border-slate-300 dark:border-slate-700 pl-2.5 hidden sm:inline-block">--</span>
+            <span id="currStockPeriod" class="text-[11px] bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded font-medium">--</span>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap text-xs text-slate-600 dark:text-slate-300 pt-0.5">
+            <span class="text-slate-400 dark:text-slate-500">产业大类:</span>
+            <span id="currStockCategoryGroup" class="font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded text-[11px] border border-emerald-200 dark:border-emerald-800">--</span>
+            <span class="text-slate-400 dark:text-slate-500 ml-2">申万分类:</span>
+            <span id="currStockIndustry" class="font-semibold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[11px]">--</span>
+            <span class="text-slate-400 dark:text-slate-500 ml-2">客群类型:</span>
+            <span id="currStockClientType" class="text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/50 border border-teal-200 dark:border-teal-800 px-2 py-0.5 rounded text-[11px] font-medium">--</span>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="flex items-center gap-2 self-stretch md:self-auto justify-end">
+          <button onclick="resetGraphView()" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> 居中复位
+          </button>
+          <button onclick="openInKlineDashboard()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white shadow-sm flex items-center gap-1.5 transition">
+            <i data-lucide="trending-up" class="w-3.5 h-3.5"></i> 多因子选股
+          </button>
+        </div>
+      </div>
+
+      <!-- 中央 ECharts 关系拓扑图谱大舞台 -->
+      <div class="bg-white dark:bg-[#0d131f] border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <span class="text-xs font-bold text-slate-800 dark:text-slate-200">产业链流通拓扑图（上游供应商 ➔ 公司本级 ➔ 下游核心客户）</span>
+          </div>
+          <div class="flex items-center gap-3 text-[11px] text-slate-500 font-mono">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> 上游供应商</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> 公司本级</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 下游客户</span>
+          </div>
+        </div>
+
+        <!-- ECharts 容器 (高 480px) -->
+        <div id="industryGraphChart" class="w-full h-[480px] rounded-lg bg-slate-50 dark:bg-[#080d14] border border-slate-200 dark:border-slate-800/80"></div>
+        <div class="flex items-center justify-between mt-2 text-[11px] text-slate-400 dark:text-slate-500">
+          <span>💡 提示：点击<strong>实名客户/供应商（如国家电网、小米、华为等）</strong>可穿透全市场；点击年报脱敏代称（如A公司、第一名）将提示已脱敏</span>
+          <span>数据节点已根据采购/销售占比自适应高亮</span>
+        </div>
+      </div>
+
+      <!-- 4 大深度分析卡片 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- 卡片 1: 专属商业与经营模式 -->
+        <div class="bg-white dark:bg-[#0d131f] border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col space-y-2 shadow-sm">
+          <div class="flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+            <i data-lucide="briefcase" class="w-4 h-4"></i>
+            <span>专属商业与经营模式</span>
+          </div>
+          <p id="cardBusinessModel" class="text-xs text-slate-700 dark:text-slate-200 leading-relaxed bg-slate-50 dark:bg-[#080d14] p-3 rounded-lg border border-slate-200 dark:border-slate-800/60 font-medium">
+            --
+          </p>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            <span class="font-bold text-slate-700 dark:text-slate-300">公司简介与亮点:</span>
+            <p id="cardHighlights" class="text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2 leading-relaxed">--</p>
+          </div>
+        </div>
+
+        <!-- 卡片 2: 经财报披露的真实主要产品 -->
+        <div class="bg-white dark:bg-[#0d131f] border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col space-y-2 shadow-sm">
+          <div class="flex items-center gap-1.5 text-xs font-bold text-teal-700 dark:text-teal-400">
+            <i data-lucide="package" class="w-4 h-4"></i>
+            <span>经财报披露的主要产品 (无则留空)</span>
+          </div>
+          <div id="cardProducts" class="text-xs text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-[#080d14] p-3 rounded-lg border border-slate-200 dark:border-slate-800/60 flex-1 flex flex-wrap gap-1.5 content-start">
+            <span class="text-xs text-slate-400 italic">--</span>
+          </div>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            <span class="font-bold text-slate-700 dark:text-slate-300">主营范围:</span>
+            <p id="cardMajorBusiness" class="text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2 leading-relaxed">--</p>
+          </div>
+        </div>
+
+        <!-- 卡片 3: 上下游采购属性与细分赛道 -->
+        <div class="bg-white dark:bg-[#0d131f] border border-slate-200 dark:border-slate-800 rounded-xl p-4 md:col-span-2 space-y-3 shadow-sm">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            
+            <!-- 上游 -->
+            <div class="space-y-1 bg-slate-50 dark:bg-[#080d14] p-3 rounded-lg border border-slate-200 dark:border-slate-800">
+              <div class="flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400">
+                <i data-lucide="arrow-down-left" class="w-3.5 h-3.5"></i>
+                <span>上游市场 (核心原材料与零部件采购画像)</span>
+              </div>
+              <p id="cardUpstreamMarket" class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">--</p>
+            </div>
+
+            <!-- 下游 -->
+            <div class="space-y-1 bg-slate-50 dark:bg-[#080d14] p-3 rounded-lg border border-slate-200 dark:border-slate-800">
+              <div class="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+                <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+                <span>下游市场 (细分应用赛道与系统集成)</span>
+              </div>
+              <p id="cardDownstreamMarket" class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">--</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 卡片 4: 供应商 VS 客户对比列表 -->
+        <div class="bg-white dark:bg-[#0d131f] border border-slate-200 dark:border-slate-800 rounded-xl p-4 md:col-span-2 space-y-3 shadow-sm">
+          <div class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+            <i data-lucide="split" class="w-4 h-4 text-emerald-500"></i>
+            <span>前五大供应商采购明细 VS 前五大客户销售明细 (实名高亮支持穿透，脱敏代称自动拦截)</span>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            
+            <!-- 供应商 -->
+            <div class="space-y-2">
+              <div class="text-xs font-semibold text-blue-600 dark:text-blue-400 border-b border-slate-200 dark:border-slate-800 pb-1.5">
+                上游前五大供应商清单
+              </div>
+              <div id="supplierMatrixList" class="space-y-1.5"></div>
+            </div>
+
+            <!-- 客户 -->
+            <div class="space-y-2">
+              <div class="text-xs font-semibold text-amber-600 dark:text-amber-400 border-b border-slate-200 dark:border-slate-800 pb-1.5">
+                下游前五大核心客户清单
+              </div>
+              <div id="clientMatrixList" class="space-y-1.5"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <!-- 反向穿透模态框 -->
+  <div id="penetrationModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-[#0d131f] border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+      <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-[#080d14]">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 flex items-center justify-center">
+            <i data-lucide="link" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white" id="modalEntityTitle">全市场实名供应链穿透关联</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400" id="modalEntitySubtitle">正在检索...</p>
+          </div>
+        </div>
+        <button onclick="closePenetrationModal()" class="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-3">
+        <table class="w-full text-left text-xs">
+          <thead class="text-[11px] text-slate-500 uppercase bg-slate-100 dark:bg-[#080d14] sticky top-0 border-b border-slate-200 dark:border-slate-800">
+            <tr>
+              <th class="py-2 px-3">代码</th>
+              <th class="py-2 px-3">名称</th>
+              <th class="py-2 px-3">产业大类</th>
+              <th class="py-2 px-3">关系属性</th>
+              <th class="py-2 px-3 text-right">金额 (亿元)</th>
+              <th class="py-2 px-3 text-right">占比 (%)</th>
+              <th class="py-2 px-3 text-center">操作</th>
+            </tr>
+          </thead>
+          <tbody id="modalTableBody" class="divide-y divide-slate-100 dark:divide-slate-800/60"></tbody>
+        </table>
+      </div>
+      <div class="p-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400 bg-slate-50 dark:bg-[#080d14]">
+        <span>数据来源：聚源金融审计数据库（已全面过滤所有脱敏代称）</span>
+        <button onclick="closePenetrationModal()" class="px-3 py-1 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 脱敏代称友好提示 Toast -->
+  <div id="anonymousToast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-slate-700 text-xs flex items-center gap-2 transition-all">
+    <i data-lucide="alert-circle" class="w-4 h-4 text-amber-400 flex-shrink-0"></i>
+    <span id="anonymousToastText">该客户为公司年报商业机密脱敏代称，暂无统一实名主体，不支持全市场穿透。</span>
+  </div>
+
+  <script>
+    // HTML 转义安全工具函数 (彻底防御 XSS 与单引号破坏)
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // 5 大自定义产业大类映射表 (严格 31 申万行业映射)
+    const CUSTOM_CATEGORY_MAP = {
+      '科技创造': ['电子', '计算机', '通信', '传媒', '电力设备', '国防军工', '机械设备'],
+      '民生消费': ['食品饮料', '医药生物', '家用电器', '农林牧渔', '社会服务', '商贸零售', '纺织服饰', '美容护理', '轻工制造'],
+      '资源保障': ['煤炭', '石油石化', '有色金属', '钢铁', '基础化工', '建筑材料', '公用事业', '环保'],
+      '制造与周期': ['汽车', '交通运输', '建筑装饰'],
+      '金融与综合': ['银行', '非银金融', '房地产', '综合']
+    };
+
+    function getCategoryGroupBySw1(sw1) {
+      if (!sw1) return '金融与综合';
+      for (const [groupName, swList] of Object.entries(CUSTOM_CATEGORY_MAP)) {
+        if (swList.includes(sw1)) return groupName;
+      }
+      return '金融与综合';
+    }
+
+    // 严密脱敏代称识别函数 (100% 拦截 A公司、B公司、第一名、客户1、借款人A、星号遮蔽等)
+    const ANONYMOUS_REGEX = /^(第[一二三四五六七八九十0-9]+[名位]|第[一二三四五六七八九十0-9]+大[客户供应商]+|[A-Za-z0-9一二三四五六七八九十甲乙丙丁戊己庚辛壬癸]+(公司|企业|单位|商户|客户|供应商|机构|关联方|非关联方)|(公司|企业|单位|商户|客户|供应商|机构|关联方|非关联方)[A-Za-z0-9一二三四五六七八九十甲乙丙丁戊己庚辛壬癸]+|客户[0-9A-Za-z一二三四五]+|供应商[0-9A-Za-z一二三四五]+|单位[0-9A-Za-z一二三四五]+|其他|其他客户|其他供应商|零星客户|散户|个人|汇总|合计|前五名合计|匿名)$/i;
+
+    function isAnonymousEntity(name) {
+      if (!name) return true;
+      const clean = name.trim();
+      if (clean.length <= 1) return true;
+      // 1. 包含星号遮蔽 (如 ********, **研究所)
+      if (clean.includes('*') || clean.includes('＊')) return true;
+      // 2. 借款人、承租人等金融脱敏代称 (如 借款人A, 借款人1)
+      if (/^借款人|^承租人|^被保证人/i.test(clean)) return true;
+      // 3. 长度 <= 4 且包含特征词 (如 A公司, B公司, 甲单位, 客户1, 第一名)
+      if (clean.length <= 4 && (clean.includes('公司') || clean.includes('企业') || clean.includes('单位') || clean.includes('名') || clean.includes('客户') || clean.includes('供应商') || clean.includes('商户') || clean.includes('机构') || clean.includes('方'))) {
+        return true;
+      }
+      // 4. 正则匹配
+      if (ANONYMOUS_REGEX.test(clean)) return true;
+      return false;
+    }
+
+    let g_stockData = {}; 
+    let g_basicIndex = {};
+    let g_currCode = '300750'; // 默认宁德时代
+    let g_activeCategoryGroup = 'ALL';
+    let g_chartInstance = null;
+    let g_industryGroupMap = {};
+    let g_categoryCountMap = {};
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      initTheme();
+      lucide.createIcons();
+      initChart();
+      setupSearch();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const codeParam = urlParams.get('code');
+      if (codeParam) g_currCode = codeParam;
+
+      await loadBasicIndex();
+      await loadFullDataset();
+    });
+
+    function initTheme() {
+      const savedTheme = localStorage.getItem('ashare_theme') || 'light';
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.remove('light');
+        document.documentElement.classList.add('dark');
+        document.getElementById('theme-icon').setAttribute('data-lucide', 'sun');
+        document.getElementById('theme-text').innerText = '浅色';
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+        document.getElementById('theme-icon').setAttribute('data-lucide', 'moon');
+        document.getElementById('theme-text').innerText = '深色';
+      }
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.contains('dark');
+      if (isDark) {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+        localStorage.setItem('ashare_theme', 'light');
+        document.getElementById('theme-icon').setAttribute('data-lucide', 'moon');
+        document.getElementById('theme-text').innerText = '深色';
+      } else {
+        document.documentElement.classList.remove('light');
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('ashare_theme', 'dark');
+        document.getElementById('theme-icon').setAttribute('data-lucide', 'sun');
+        document.getElementById('theme-text').innerText = '浅色';
+      }
+      lucide.createIcons();
+      if (g_stockData[g_currCode]) {
+        renderEChartsTree(g_stockData[g_currCode]);
+      }
+    }
+
+    function initChart() {
+      const container = document.getElementById('industryGraphChart');
+      g_chartInstance = echarts.init(container);
+      
+      // 使用 ResizeObserver 监听容器自适应
+      if (window.ResizeObserver) {
+        new ResizeObserver(() => {
+          if (g_chartInstance) g_chartInstance.resize();
+        }).observe(container);
+      } else {
+        window.addEventListener('resize', () => g_chartInstance.resize());
+      }
+
+      g_chartInstance.on('click', (params) => {
+        if (params.data && params.data.entityType) {
+          const name = params.data.rawName;
+          if (isAnonymousEntity(name)) {
+            showAnonymousToast(name);
+          } else {
+            showPenetrationModal(name, params.data.entityType);
+          }
+        }
+      });
+    }
+
+    // 切换 5 大产业大类 Tab (支持自动联动切换当前股票)
+    function selectCategoryGroup(groupName) {
+      g_activeCategoryGroup = groupName;
+      
+      document.querySelectorAll('.cat-tab').forEach(tab => {
+        tab.className = 'cat-tab px-2 py-1 rounded text-center text-xs font-medium bg-white dark:bg-[#121927] hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 transition';
+      });
+      const activeTab = document.getElementById(`tab_${groupName}`);
+      if (activeTab) {
+        activeTab.className = 'cat-tab px-2 py-1 rounded text-center text-xs font-semibold bg-emerald-600 text-white shadow-sm transition';
+      }
+
+      renderIndustryTree();
+
+      // 自动联动：如果当前股票不在该大类中，自动切换到该大类的第一只代表股票
+      if (groupName !== 'ALL') {
+        const allowedSw1 = CUSTOM_CATEGORY_MAP[groupName] || [];
+        const currStock = g_stockData[g_currCode] || g_basicIndex[g_currCode];
+        if (currStock) {
+          const currSw1 = (currStock.industry || currStock.i || '').split(' - ')[0];
+          if (!allowedSw1.includes(currSw1)) {
+            for (const sw1 of allowedSw1) {
+              const list = g_industryGroupMap[sw1];
+              if (list && list.length > 0) {
+                renderStockDetail(list[0].c);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    async function loadBasicIndex() {
+      try {
+        const res = await fetch('data/stock_basic_index.json');
+        g_basicIndex = await res.json();
+        
+        g_industryGroupMap = {};
+        g_categoryCountMap = { '科技创造': 0, '民生消费': 0, '资源保障': 0, '制造与周期': 0, '金融与综合': 0 };
+
+        for (const [code, item] of Object.entries(g_basicIndex)) {
+          const ind1 = (item.i || '综合').split(' - ')[0] || '综合';
+          if (!g_industryGroupMap[ind1]) g_industryGroupMap[ind1] = [];
+          g_industryGroupMap[ind1].push(item);
+
+          const group = getCategoryGroupBySw1(ind1);
+          g_categoryCountMap[group] = (g_categoryCountMap[group] || 0) + 1;
+        }
+
+        // 动态更新 5 大产业大类 Tab 真实精准数量
+        const total = Object.keys(g_basicIndex).length;
+        document.getElementById('headerStockCount').innerText = `${total} 家在市 A 股`;
+        document.getElementById('tab_ALL').innerText = `全部大类 (${total})`;
+        document.getElementById('tab_科技创造').innerText = `科技创造 (${g_categoryCountMap['科技创造'] || 0})`;
+        document.getElementById('tab_民生消费').innerText = `民生消费 (${g_categoryCountMap['民生消费'] || 0})`;
+        document.getElementById('tab_资源保障').innerText = `资源保障 (${g_categoryCountMap['资源保障'] || 0})`;
+        document.getElementById('tab_制造与周期').innerText = `制造周期 (${g_categoryCountMap['制造与周期'] || 0})`;
+        document.getElementById('tab_金融与综合').innerText = `金融综合 (${g_categoryCountMap['金融与综合'] || 0})`;
+
+        renderIndustryTree();
+      } catch (e) {
+        console.warn('基础索引加载异常:', e);
+      }
+    }
+
+    async function loadFullDataset() {
+      try {
+        const res = await fetch('data/stock_profiles_summary.json');
+        g_stockData = await res.json();
+        
+        document.getElementById('loadStatusText').innerHTML = `<i data-lucide="check-circle" class="w-3 h-3 text-emerald-500"></i> 5,214 家全景已就绪`;
+        lucide.createIcons();
+
+        if (!g_stockData[g_currCode]) {
+          g_currCode = Object.keys(g_stockData)[0] || '300750';
+        }
+        renderStockDetail(g_currCode);
+      } catch (err) {
+        document.getElementById('loadStatusText').innerHTML = `<span class="text-rose-500">加载失败，请刷新</span>`;
+      }
+    }
+
+    function renderIndustryTree() {
+      const container = document.getElementById('industryTreeList');
+      container.innerHTML = '';
+
+      let allowedSw1List = null;
+      if (g_activeCategoryGroup !== 'ALL') {
+        allowedSw1List = CUSTOM_CATEGORY_MAP[g_activeCategoryGroup] || [];
+      }
+
+      const sortedInds = Object.keys(g_industryGroupMap).sort().filter(ind1 => {
+        if (!allowedSw1List) return true;
+        return allowedSw1List.includes(ind1);
+      });
+
+      let totalFilteredStocks = 0;
+      sortedInds.forEach(ind1 => {
+        totalFilteredStocks += (g_industryGroupMap[ind1] || []).length;
+      });
+
+      if (g_activeCategoryGroup === 'ALL') {
+        document.getElementById('activeGroupCount').innerText = `全部 (${Object.keys(g_basicIndex).length})`;
+      } else {
+        document.getElementById('activeGroupCount').innerText = `${g_activeCategoryGroup} (${totalFilteredStocks})`;
+      }
+      document.getElementById('filteredIndCountBadge').innerText = `${sortedInds.length} 个行业`;
+
+      sortedInds.forEach((ind1, idx) => {
+        const list = g_industryGroupMap[ind1] || [];
+        const isDefaultOpen = idx === 0 || ind1 === '电力设备' || ind1 === '电子';
+
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-white dark:bg-[#0d131f] mb-1';
+        groupDiv.innerHTML = `
+          <button onclick="toggleIndustryGroup('ind_group_${idx}')" class="w-full px-2.5 py-1.5 text-xs font-semibold text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 flex items-center justify-between transition">
+            <span class="flex items-center gap-1.5"><i data-lucide="folder" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"></i> ${ind1}</span>
+            <span class="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.2 rounded font-mono">${list.length}</span>
+          </button>
+          <div id="ind_group_${idx}" class="${isDefaultOpen ? '' : 'hidden'} px-2 py-1 space-y-0.5 bg-slate-50 dark:bg-[#080d14] max-h-44 overflow-y-auto">
+            ${list.slice(0, 30).map(s => `
+              <div onclick="renderStockDetail('${s.c}')" class="px-2 py-1 rounded text-xs text-slate-700 dark:text-slate-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/40 cursor-pointer flex items-center justify-between transition ${s.c === g_currCode ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 font-bold' : ''}">
+                <span>${escapeHtml(s.n)}</span>
+                <span class="text-[10px] text-slate-400 font-mono">${s.c}</span>
+              </div>
+            `).join('')}
+            ${list.length > 30 ? `<div class="text-[10px] text-slate-400 text-center py-1">余 ${list.length - 30} 只请搜索</div>` : ''}
+          </div>
+        `;
+        container.appendChild(groupDiv);
+      });
+      lucide.createIcons();
+    }
+
+    function toggleIndustryGroup(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('hidden');
+    }
+
+    function renderStockDetail(code) {
+      const stock = g_stockData[code];
+      if (!stock) {
+        if (g_basicIndex[code]) {
+          const b = g_basicIndex[code];
+          document.getElementById('currStockName').innerHTML = `${escapeHtml(b.n)} <span class="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">${b.c}</span>`;
+          document.getElementById('currStockIndustry').innerText = b.i || '综合';
+        }
+        return;
+      }
+      g_currCode = code;
+
+      const sw1 = (stock.industry || '综合').split(' - ')[0];
+      const catGroup = getCategoryGroupBySw1(sw1);
+
+      document.getElementById('currStockName').innerHTML = `${escapeHtml(stock.name)} <span class="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">${stock.code}</span>`;
+      document.getElementById('currStockCompany').innerText = stock.company_name || stock.name;
+      document.getElementById('currStockPeriod').innerText = stock.report_period || '2025年年度报告';
+      document.getElementById('currStockCategoryGroup').innerText = catGroup;
+      document.getElementById('currStockIndustry').innerText = stock.industry || '综合';
+      document.getElementById('currStockClientType').innerText = stock.target_clients_type || 'B端工业制造企业';
+
+      document.getElementById('cardBusinessModel').innerText = stock.business_model || '研发、生产、销售一体化及产业链上下游深度协同经营模式';
+      document.getElementById('cardHighlights').innerText = stock.highlights || '暂无简介';
+
+      const prodContainer = document.getElementById('cardProducts');
+      prodContainer.innerHTML = '';
+      if (stock.primary_products && stock.primary_products.length > 0 && stock.primary_products[0]) {
+        stock.primary_products.forEach(p => {
+          if (p.trim()) {
+            const span = document.createElement('span');
+            span.className = 'px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60 text-xs font-medium';
+            span.innerText = p.trim();
+            prodContainer.appendChild(span);
+          }
+        });
+      } else {
+        prodContainer.innerHTML = '<span class="text-xs text-slate-400 italic">（公司财报未单独披露具体产品或无实体产品）</span>';
+      }
+      document.getElementById('cardMajorBusiness').innerText = stock.major_business || '详见主营业务披露';
+
+      document.getElementById('cardUpstreamMarket').innerText = stock.upstream_market || '上游基础原材料与供应链采购';
+      document.getElementById('cardDownstreamMarket').innerText = (stock.downstream_market && stock.downstream_market[0]) || '下游细分应用赛道与客户群';
+
+      renderMatrixLists(stock);
+      renderEChartsTree(stock);
+      lucide.createIcons();
+    }
+
+    // 采用数据属性 data-entity-name 与安全转义，彻底消灭单引号破坏与 XSS
+    function renderMatrixLists(stock) {
+      // 供应商
+      const suppContainer = document.getElementById('supplierMatrixList');
+      suppContainer.innerHTML = '';
+      let hasSupp = false;
+      (stock.top_suppliers || []).forEach(s => {
+        if (s.name || s.amount_yi) {
+          hasSupp = true;
+          const ratio = parseFloat(s.ratio_pct) || 0;
+          const isAnon = isAnonymousEntity(s.name);
+          const safeName = escapeHtml(s.name || '主要供应商');
+          const div = document.createElement('div');
+          div.className = 'bg-slate-50 dark:bg-[#080d14] p-2 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col space-y-1';
+          
+          let nameHtml = '';
+          if (isAnon) {
+            nameHtml = `<span class="text-slate-400 italic cursor-pointer flex items-center gap-1 entity-anon-trigger" data-name="${safeName}">${safeName} <span class="text-[9px] bg-slate-200 dark:bg-slate-800 text-slate-500 px-1 rounded not-italic font-normal">脱敏代称</span></span>`;
+          } else {
+            nameHtml = `<span class="cursor-pointer font-semibold text-blue-700 dark:text-blue-400 hover:underline flex items-center gap-1 entity-penetrate-trigger" data-name="${safeName}" data-type="supplier">${safeName} <span class="text-[9px] bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-300 px-1 rounded font-normal">实名可穿透</span></span>`;
+          }
+
+          div.innerHTML = `
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <span class="w-4 h-4 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-[10px] flex items-center justify-center font-mono font-bold">${s.rank}</span>
+                ${nameHtml}
+              </span>
+              <span class="text-slate-500 dark:text-slate-400 font-mono text-[11px]">${s.amount_yi ? s.amount_yi + ' 亿' : ''} (${s.ratio_pct || 0}%)</span>
+            </div>
+            <div class="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div class="bg-blue-600 dark:bg-blue-500 h-1.5 rounded-full" style="width: ${Math.min(Math.max(ratio, 0), 100)}%"></div>
+            </div>
+          `;
+          suppContainer.appendChild(div);
+        }
+      });
+      if (!hasSupp) suppContainer.innerHTML = '<div class="text-xs text-slate-400 italic py-1">定期报告未单独披露大供应商清单</div>';
+
+      // 客户
+      const custContainer = document.getElementById('clientMatrixList');
+      custContainer.innerHTML = '';
+      let hasCust = false;
+      (stock.top_clients || []).forEach(c => {
+        if (c.name || c.amount_yi) {
+          hasCust = true;
+          const ratio = parseFloat(c.ratio_pct) || 0;
+          const isAnon = isAnonymousEntity(c.name);
+          const safeName = escapeHtml(c.name || '主要客户');
+          const div = document.createElement('div');
+          div.className = 'bg-slate-50 dark:bg-[#080d14] p-2 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col space-y-1';
+          
+          let nameHtml = '';
+          if (isAnon) {
+            nameHtml = `<span class="text-slate-400 italic cursor-pointer flex items-center gap-1 entity-anon-trigger" data-name="${safeName}">${safeName} <span class="text-[9px] bg-slate-200 dark:bg-slate-800 text-slate-500 px-1 rounded not-italic font-normal">脱敏代称</span></span>`;
+          } else {
+            nameHtml = `<span class="cursor-pointer font-semibold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1 entity-penetrate-trigger" data-name="${safeName}" data-type="client">${safeName} <span class="text-[9px] bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 px-1 rounded font-normal">实名可穿透</span></span>`;
+          }
+
+          div.innerHTML = `
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <span class="w-4 h-4 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] flex items-center justify-center font-mono font-bold">${c.rank}</span>
+                ${nameHtml}
+              </span>
+              <span class="text-slate-500 dark:text-slate-400 font-mono text-[11px]">${c.amount_yi ? c.amount_yi + ' 亿' : ''} (${c.ratio_pct || 0}%)</span>
+            </div>
+            <div class="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div class="bg-amber-600 dark:bg-amber-500 h-1.5 rounded-full" style="width: ${Math.min(Math.max(ratio, 0), 100)}%"></div>
+            </div>
+          `;
+          custContainer.appendChild(div);
+        }
+      });
+      if (!hasCust) custContainer.innerHTML = '<div class="text-xs text-slate-400 italic py-1">定期报告未单独披露大客户清单，客群分散</div>';
+
+      // 绑定安全的事件监听
+      document.querySelectorAll('.entity-anon-trigger').forEach(el => {
+        el.addEventListener('click', () => showAnonymousToast(el.getAttribute('data-name')));
+      });
+      document.querySelectorAll('.entity-penetrate-trigger').forEach(el => {
+        el.addEventListener('click', () => showPenetrationModal(el.getAttribute('data-name'), el.getAttribute('data-type')));
+      });
+    }
+
+    function renderEChartsTree(stock) {
+      const isDark = document.documentElement.classList.contains('dark');
+      const nodes = [];
+      const links = [];
+      const categories = [{ name: '中心公司' }, { name: '上游供应商' }, { name: '下游核心客户' }];
+
+      // 中心节点
+      nodes.push({
+        name: `${stock.name}\n(${stock.code})`,
+        category: 0,
+        symbolSize: 62,
+        itemStyle: {
+          color: '#10b981',
+          borderColor: isDark ? '#34d399' : '#059669',
+          borderWidth: 3,
+          shadowBlur: 10,
+          shadowColor: 'rgba(16, 185, 129, 0.4)'
+        },
+        label: { show: true, color: '#ffffff', fontWeight: 'bold', fontSize: 12 },
+        x: 380,
+        y: 220
+      });
+
+      // 上游供应商 (左)
+      (stock.top_suppliers || []).forEach((s, idx) => {
+        if (s.name || s.amount_yi) {
+          const sName = s.name || `供应商${s.rank}`;
+          const isAnon = isAnonymousEntity(sName);
+          const labelText = `[供${s.rank}] ${sName.length > 8 ? sName.slice(0, 8) + '...' : sName}${isAnon ? '(脱敏)' : ''}\n${s.amount_yi ? s.amount_yi + '亿 ' : ''}(${s.ratio_pct || 0}%)`;
+          const nodeKey = `supp_${idx}_${sName}`;
+
+          nodes.push({
+            name: nodeKey,
+            rawName: sName,
+            isAnonymous: isAnon,
+            entityType: 'supplier',
+            category: 1,
+            symbolSize: Math.max(34, Math.min(48, 34 + (parseFloat(s.ratio_pct) || 0) * 0.3)),
+            itemStyle: {
+              color: isAnon ? (isDark ? '#334155' : '#94a3b8') : '#3b82f6',
+              borderColor: isAnon ? (isDark ? '#475569' : '#cbd5e1') : '#60a5fa',
+              borderWidth: 2
+            },
+            label: { show: true, formatter: labelText, color: isDark ? '#93c5fd' : '#1d4ed8', fontSize: 10, position: 'left' },
+            x: 140,
+            y: 90 + idx * 65
+          });
+
+          // 连线方向：上游供应商 -> 公司本级
+          links.push({
+            source: nodeKey,
+            target: `${stock.name}\n(${stock.code})`,
+            value: s.ratio_pct ? `${s.ratio_pct}%` : '',
+            lineStyle: { color: isAnon ? (isDark ? '#475569' : '#cbd5e1') : '#3b82f6', width: 2, curveness: 0.12 }
+          });
+        }
+      });
+
+      // 下游客户 (右)
+      (stock.top_clients || []).forEach((c, idx) => {
+        if (c.name || c.amount_yi) {
+          const cName = c.name || `客户${c.rank}`;
+          const isAnon = isAnonymousEntity(cName);
+          const labelText = `[客${c.rank}] ${cName.length > 8 ? cName.slice(0, 8) + '...' : cName}${isAnon ? '(脱敏)' : ''}\n${c.amount_yi ? c.amount_yi + '亿 ' : ''}(${c.ratio_pct || 0}%)`;
+          const nodeKey = `cust_${idx}_${cName}`;
+
+          nodes.push({
+            name: nodeKey,
+            rawName: cName,
+            isAnonymous: isAnon,
+            entityType: 'client',
+            category: 2,
+            symbolSize: Math.max(34, Math.min(48, 34 + (parseFloat(c.ratio_pct) || 0) * 0.3)),
+            itemStyle: {
+              color: isAnon ? (isDark ? '#334155' : '#94a3b8') : '#f59e0b',
+              borderColor: isAnon ? (isDark ? '#475569' : '#cbd5e1') : '#fbbf24',
+              borderWidth: 2
+            },
+            label: { show: true, formatter: labelText, color: isDark ? '#fde68a' : '#b45309', fontSize: 10, position: 'right' },
+            x: 620,
+            y: 90 + idx * 65
+          });
+
+          // 连线方向：公司本级 -> 下游客户
+          links.push({
+            source: `${stock.name}\n(${stock.code})`,
+            target: nodeKey,
+            value: c.ratio_pct ? `${c.ratio_pct}%` : '',
+            lineStyle: { color: isAnon ? (isDark ? '#475569' : '#cbd5e1') : '#f59e0b', width: 2, curveness: 0.12 }
+          });
+        }
+      });
+
+      const option = {
+        backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'item',
+          backgroundColor: isDark ? '#0f172a' : '#ffffff',
+          borderColor: isDark ? '#334155' : '#e2e8f0',
+          textStyle: { color: isDark ? '#f8fafc' : '#0f172a', fontSize: 12 },
+          formatter: (params) => {
+            if (params.data.entityType) {
+              const role = params.data.entityType === 'supplier' ? '上游供应商' : '下游核心客户';
+              const isAnon = params.data.isAnonymous;
+              const safeName = escapeHtml(params.data.rawName);
+              if (isAnon) {
+                return `<b>【${role}】</b><br/>实体名称: ${safeName}<br/><span style="color:#f59e0b">⚠️ 商业机密脱敏代称（不支持跨公司穿透）</span>`;
+              }
+              return `<b>【${role}】</b><br/>实体名称: ${safeName}<br/><span style="color:#10b981">💡 点击穿透全市场实名供应链</span>`;
+            }
+            return `<b>${escapeHtml(params.name)}</b><br/>行业: ${escapeHtml(stock.industry)}`;
+          }
+        },
+        series: [
+          {
+            type: 'graph',
+            layout: 'none',
+            categories: categories,
+            nodes: nodes,
+            links: links,
+            roam: true,
+            label: { show: true },
+            edgeSymbol: ['circle', 'arrow'],
+            edgeSymbolSize: [3, 7],
+            edgeLabel: { show: true, fontSize: 9, color: isDark ? '#94a3b8' : '#64748b', formatter: '{c}' },
+            lineStyle: { opacity: 0.85 }
+          }
+        ]
+      };
+
+      g_chartInstance.setOption(option, true);
+    }
+
+    function resetGraphView() {
+      if (g_chartInstance && g_stockData[g_currCode]) {
+        renderEChartsTree(g_stockData[g_currCode]);
+      }
+    }
+
+    function openInKlineDashboard() {
+      window.location.href = `index.html?code=${g_currCode}`;
+    }
+
+    function filterByTag(keyword) {
+      document.getElementById('globalSearchInput').value = keyword;
+      showPenetrationModal(keyword);
+    }
+
+    function setupSearch() {
+      const input = document.getElementById('globalSearchInput');
+      const dropdown = document.getElementById('searchDropdown');
+      const clearBtn = document.getElementById('clearSearchBtn');
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const val = input.value.trim();
+          if (!val) return;
+          if (/^\d{6}$/.test(val) && (g_stockData[val] || g_basicIndex[val])) {
+            renderStockDetail(val);
+            dropdown.classList.add('hidden');
+          } else {
+            if (isAnonymousEntity(val)) {
+              showAnonymousToast(val);
+            } else {
+              showPenetrationModal(val);
+              dropdown.classList.add('hidden');
+            }
+          }
+        }
+      });
+
+      input.addEventListener('input', (e) => {
+        const val = e.target.value.trim().toLowerCase();
+        if (!val) {
+          dropdown.classList.add('hidden');
+          clearBtn.classList.add('hidden');
+          return;
+        }
+        clearBtn.classList.remove('hidden');
+
+        const dataset = Object.keys(g_stockData).length > 0 ? g_stockData : g_basicIndex;
+        const matches = [];
+
+        let entityHitCount = 0;
+        const isAnon = isAnonymousEntity(val);
+        if (!isAnon) {
+          for (const [code, item] of Object.entries(g_stockData)) {
+            let hasCustHit = false;
+            (item.top_clients || []).forEach(c => {
+              if (c.name && !isAnonymousEntity(c.name) && c.name.toLowerCase().includes(val)) hasCustHit = true;
+            });
+            if (hasCustHit) entityHitCount++;
+          }
+        }
+
+        for (const [code, item] of Object.entries(dataset)) {
+          let score = 0;
+          const name = item.name || item.n || '';
+          const ind = item.industry || item.i || '';
+
+          if (code.includes(val)) score += 10;
+          if (name.toLowerCase().includes(val)) score += 8;
+          if (ind.toLowerCase().includes(val)) score += 4;
+
+          if (score > 0) matches.push({ code, name, ind, score });
+        }
+
+        matches.sort((a, b) => b.score - a.score);
+        const topMatches = matches.slice(0, 8);
+
+        let html = '';
+        if (entityHitCount > 0 && !isAnon) {
+          const safeVal = escapeHtml(val);
+          html += `
+            <div onclick="showPenetrationModal('${safeVal}'); document.getElementById('searchDropdown').classList.add('hidden');" class="px-3 py-2.5 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 cursor-pointer flex items-center justify-between border-b border-emerald-200 dark:border-emerald-800/80 transition">
+              <span class="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                <i data-lucide="link" class="w-3.5 h-3.5"></i> 【实名大客户穿透】全市场穿透“${safeVal}”
+              </span>
+              <span class="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded font-mono font-bold">${entityHitCount} 家直供</span>
+            </div>
+          `;
+        }
+
+        if (topMatches.length === 0 && entityHitCount === 0) {
+          html += '<div class="p-3 text-xs text-slate-400 text-center">未找到相关股票或实名产业链实体</div>';
+        } else {
+          html += topMatches.map(m => `
+            <div onclick="selectSearchResult('${m.code}')" class="px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60 last:border-0 transition">
+              <div>
+                <span class="text-xs font-bold text-slate-900 dark:text-white">${escapeHtml(m.name)}</span>
+                <span class="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 ml-1.5 font-bold">${m.code}</span>
+                <span class="text-[10px] text-slate-500 ml-2 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded">${escapeHtml(m.ind.split(' - ')[0])}</span>
+              </div>
+            </div>
+          `).join('');
+        }
+        dropdown.innerHTML = html;
+        lucide.createIcons();
+        dropdown.classList.remove('hidden');
+      });
+
+      clearBtn.addEventListener('click', () => {
+        input.value = '';
+        dropdown.classList.add('hidden');
+        clearBtn.classList.add('hidden');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+          dropdown.classList.add('hidden');
+        }
+      });
+    }
+
+    function selectSearchResult(code) {
+      document.getElementById('searchDropdown').classList.add('hidden');
+      renderStockDetail(code);
+    }
+
+    function showPenetrationModal(entityKeyword, forceType) {
+      if (!entityKeyword) return;
+      const cleanKeyword = entityKeyword.trim();
+      
+      if (isAnonymousEntity(cleanKeyword)) {
+        showAnonymousToast(cleanKeyword);
+        return;
+      }
+
+      const modal = document.getElementById('penetrationModal');
+      const val = cleanKeyword.toLowerCase();
+
+      document.getElementById('modalEntityTitle').innerText = `【${cleanKeyword}】全市场实名供应链穿透关联`;
+      
+      const relations = [];
+      for (const [code, item] of Object.entries(g_stockData)) {
+        const sw1 = (item.industry || '综合').split(' - ')[0];
+        const catGroup = getCategoryGroupBySw1(sw1);
+
+        if (forceType === 'client' || !forceType) {
+          (item.top_clients || []).forEach(c => {
+            if (c.name && !isAnonymousEntity(c.name) && c.name.toLowerCase().includes(val)) {
+              relations.push({
+                stock: item,
+                catGroup: catGroup,
+                relType: '向其销售 (大客户)',
+                amount: c.amount_yi,
+                ratio: c.ratio_pct,
+                clientName: c.name
+              });
+            }
+          });
+        }
+        if (forceType === 'supplier' || !forceType) {
+          (item.top_suppliers || []).forEach(s => {
+            if (s.name && !isAnonymousEntity(s.name) && s.name.toLowerCase().includes(val)) {
+              relations.push({
+                stock: item,
+                catGroup: catGroup,
+                relType: '向其采购 (供应商)',
+                amount: s.amount_yi,
+                ratio: s.ratio_pct,
+                clientName: s.name
+              });
+            }
+          });
+        }
+      }
+
+      relations.sort((a, b) => (parseFloat(b.amount) || 0) - (parseFloat(a.amount) || 0));
+
+      document.getElementById('modalEntitySubtitle').innerText = `全市场共检索到 ${relations.length} 家 A 股上市公司与其存在直接实名交易（已排除所有脱敏代称，按交易金额降序排列）`;
+      const bodyEl = document.getElementById('modalTableBody');
+
+      if (relations.length === 0) {
+        bodyEl.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">未检索到财报中实名披露【${escapeHtml(cleanKeyword)}】的上市公司</td></tr>`;
+      } else {
+        bodyEl.innerHTML = relations.map(r => `
+          <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
+            <td class="py-2 px-3 font-mono text-emerald-600 dark:text-emerald-400 font-bold">${r.stock.code}</td>
+            <td class="py-2 px-3 font-medium text-slate-900 dark:text-white">${escapeHtml(r.stock.name)}</td>
+            <td class="py-2 px-3 text-slate-500 dark:text-slate-400">
+              <span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">${escapeHtml(r.catGroup)}</span>
+            </td>
+            <td class="py-2 px-3">
+              <span class="px-2 py-0.5 rounded text-[10px] ${r.relType.includes('销售') ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300' : 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300'}">${escapeHtml(r.relType)}</span>
+            </td>
+            <td class="py-2 px-3 text-right font-mono font-bold text-slate-900 dark:text-slate-100">${r.amount ? r.amount + ' 亿' : '--'}</td>
+            <td class="py-2 px-3 text-right font-mono font-bold ${parseFloat(r.ratio) > 30 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'}">${r.ratio ? r.ratio + '%' : '--'}</td>
+            <td class="py-2 px-3 text-center">
+              <button onclick="closePenetrationModal(); renderStockDetail('${r.stock.code}')" class="px-2.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white text-[11px] font-semibold transition">查看图谱</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      lucide.createIcons();
+      modal.classList.remove('hidden');
+    }
+
+    function closePenetrationModal() {
+      document.getElementById('penetrationModal').classList.add('hidden');
+    }
+
+    let toastTimer = null;
+    function showAnonymousToast(name) {
+      const toast = document.getElementById('anonymousToast');
+      document.getElementById('anonymousToastText').innerText = `⚠️ 提示：【${name}】为年报商业机密脱敏代称（非统一定义法人），已自动拦截跨公司穿透。`;
+      toast.classList.remove('hidden');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3500);
+    }
+  </script>
+</body>
+</html>

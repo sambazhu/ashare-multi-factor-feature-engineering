@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>9 大因子核对分析报告（通俗版）</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧪</text></svg>"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  .card { background: #fff; border-radius: 0.75rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,.05); padding: 1.25rem; }
+  .plain { background: #fffbeb; border-left: 4px solid #fbbf24; padding: 0.5rem 1rem; font-size: 0.875rem; color: #78350f; border-radius: 0 0.5rem 0.5rem 0; }
+</style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+<div class="max-w-4xl mx-auto p-4 md:p-8 space-y-6">
+
+  <!-- ===== 头部 ===== -->
+  <header class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl p-6 md:p-8 shadow">
+    <div class="flex items-center gap-3 mb-2">
+      <span class="text-3xl">🧪</span>
+      <h1 class="text-xl md:text-2xl font-bold">A 股 9 大因子核对分析报告</h1>
+    </div>
+    <p class="text-blue-100 text-sm mb-4">数据区间 2025-10-24 ~ 2026-08-18（200 个交易日）· 报告日期 2026-08-19 · 数据版本 ver_20260819_091435</p>
+    <div class="inline-flex items-center gap-2 bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold shadow">
+      ✅ 总结论：全部通过，数据可信
+    </div>
+    <p class="text-blue-100 text-sm mt-3">一句话：<b class="text-white">10 个标签、103 万行数据，用两套完全独立的算法"对答案"，10,000 行抽查 + 全量规则检查，零错误。</b></p>
+  </header>
+
+  <!-- ===== 目录导航 ===== -->
+  <nav class="card flex flex-wrap gap-2 text-xs font-semibold !p-3">
+    <a href="#pipeline" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-blue-100">🏭 数据加工链路</a>
+    <a href="#rules" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-blue-100">📐 通用口径规则</a>
+    <a href="#specs" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-blue-100">🧾 逐因子详细口径</a>
+    <a href="#troubleshoot" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-blue-100">🛠️ 症状排查表</a>
+  </nav>
+
+  <!-- ===== 这份报告在核对什么 ===== -->
+  <section class="card">
+    <h2 class="text-lg font-bold mb-3">📋 这份报告核对的是什么？</h2>
+    <p class="text-sm leading-6 mb-3">
+      系统每天给全市场 5,208 只 A 股打 10 种"标签"（1 个均线形态 + 9 个策略因子），比如"今天放量突破""创一年新高"。
+      这份报告要回答一个问题：<b>这些标签打得对不对？</b>
+    </p>
+    <div class="plain mb-3">💡 打比方：这就像给全市场股票做"体检"，我们请了两位独立的医生各查一遍，再翻出体检手册逐条对照，确认每一项结论都没写错。</div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+      <div class="bg-slate-50 rounded-lg p-3"><div class="text-2xl font-extrabold text-blue-600">103.8万</div><div class="text-xs text-slate-500">核对的数据行数</div></div>
+      <div class="bg-slate-50 rounded-lg p-3"><div class="text-2xl font-extrabold text-blue-600">10,000</div><div class="text-xs text-slate-500">两套算法逐行比对抽查</div></div>
+      <div class="bg-slate-50 rounded-lg p-3"><div class="text-2xl font-extrabold text-emerald-600">0</div><div class="text-xs text-slate-500">发现的确定性错误</div></div>
+      <div class="bg-slate-50 rounded-lg p-3"><div class="text-2xl font-extrabold text-amber-600">1</div><div class="text-xs text-slate-500">仅 1 处界面文案小瑕疵</div></div>
+    </div>
+  </section>
+
+  <!-- ===== 怎么核对的 ===== -->
+  <section class="card">
+    <h2 class="text-lg font-bold mb-3">🔍 怎么核对的？——五道工序</h2>
+    <div class="space-y-3 text-sm">
+      <div class="flex gap-3"><div class="shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">1</div>
+        <div><b>对答案：</b>同一批数据，让「数据库端 SQL」和「本地 Python」两套完全独立写的程序各算一遍，50 只股票 × 200 天 = 10,000 行逐行比对，结果必须一模一样。→ <span class="text-emerald-600 font-bold">零差异</span></div></div>
+      <div class="flex gap-3"><div class="shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">2</div>
+        <div><b>全员点名：</b>103 万行每一行都检查标签之间的逻辑关系（比如"三种新高最多只能中一个"、放量因子命中当天成交额必须过亿）。→ <span class="text-emerald-600 font-bold">零违反</span></div></div>
+      <div class="flex gap-3"><div class="shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">3</div>
+        <div><b>查户口：</b>27,373 条"覆盖期新高"逐一核对上市时间门槛（必须上市超过 500 个交易日，防止次新股虚标"历史新高"）。→ <span class="text-emerald-600 font-bold">零违规</span></div></div>
+      <div class="flex gap-3"><div class="shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">4</div>
+        <div><b>出考题：</b>人为构造极端场景做单元测试——往数据里插一个停牌日，看系统会不会被骗；构造一只上市 301 天的创新高次新股，看会不会标错级别。→ <span class="text-emerald-600 font-bold">全部答对</span></div></div>
+      <div class="flex gap-3"><div class="shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">5</div>
+        <div><b>查门面：</b>网页终端显示的数字和底层数据逐一对账（股票数、各因子命中数、行业标签、覆盖期文案）。→ <span class="text-emerald-600 font-bold">完全一致</span></div></div>
+    </div>
+  </section>
+
+  <!-- ===== 数据加工链路 ===== -->
+  <section class="card" id="pipeline">
+    <h2 class="text-lg font-bold mb-1">🏭 数据加工链路全景——从数据库到网页的 8 步</h2>
+    <p class="text-xs text-slate-500 mb-2">每个工作日 19:00 由 crontab 定时触发 <code class="bg-slate-100 px-1 rounded">daily_cron_job.sh → daily_update.py</code>，自动跑完全程（约 10 分钟），日志在 <code class="bg-slate-100 px-1 rounded">logs/</code> 目录。</p>
+    <div class="plain mb-4">💡 打比方：这就像一条中央厨房流水线——①去仓库领食材（数据库取数）→ ②挑出合格食材（股票池过滤）→ ③拼成半成品（三表合并）→ ④定游戏规则（停牌/红绿K/上市天数）→ ⑤一次性炒好所有菜（SQL 算因子）→ ⑥分盘（切 JSON）→ ⑦原子换新菜单（软链接发布）→ ⑧上菜（网页展示）。</div>
+
+    <div class="border-t border-slate-100">
+      <!-- 步骤 1 -->
+      <div class="flex gap-3 py-4 border-b border-slate-100">
+        <div class="shrink-0 w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">1</div>
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-sm">源头取数：内网聚源 Oracle 测试库（127.0.0.1 · Oracle 11g · 服务名 JYDBTEST）</div>
+          <div class="text-sm text-slate-600 mt-1">6 张关键表各司其职：</div>
+          <div class="overflow-x-auto mt-2">
+            <table class="w-full text-xs border-collapse whitespace-nowrap">
+              <thead><tr class="bg-slate-50 text-left text-slate-500"><th class="p-2 border border-slate-200">表名</th><th class="p-2 border border-slate-200">作用</th><th class="p-2 border border-slate-200">关键过滤条件</th></tr></thead>
+              <tbody>
+                <tr class="bg-emerald-50/50"><td class="p-2 border border-slate-200 font-mono">CS_STOCKADJPERFORMANCE</td><td class="p-2 border border-slate-200"><b>前复权精确 OHLC——所有价格计算的唯一样本</b></td><td class="p-2 border border-slate-200 font-mono">ADJUSTINGMETHOD=1 AND ADJUSTINGSTANDARD=1</td></tr>
+                <tr><td class="p-2 border border-slate-200 font-mono">QT_DAILYQUOTE</td><td class="p-2 border border-slate-200">主板/创业板原始收盘价、成交额、停牌占位行</td><td class="p-2 border border-slate-200">—</td></tr>
+                <tr><td class="p-2 border border-slate-200 font-mono">LC_STIBDAILYQUOTE</td><td class="p-2 border border-slate-200">科创板行情与成交额（<b class="text-red-600">主板表里没有 68 开头的数据</b>）</td><td class="p-2 border border-slate-200">—</td></tr>
+                <tr><td class="p-2 border border-slate-200 font-mono">SECUMAIN</td><td class="p-2 border border-slate-200">代码、名称、上市日期、证券类别</td><td class="p-2 border border-slate-200 font-mono">SECUCATEGORY=1（才是A股）</td></tr>
+                <tr><td class="p-2 border border-slate-200 font-mono">QT_TRADINGDAYNEW</td><td class="p-2 border border-slate-200">市场交易日历（数"第几个交易日"用）</td><td class="p-2 border border-slate-200 font-mono">SECUMARKET=83 AND IFTRADINGDAY=1</td></tr>
+                <tr><td class="p-2 border border-slate-200 font-mono">LC_EXGINDUSTRY ＋ LC_STIBEXGINDUSTRY</td><td class="p-2 border border-slate-200">申万 2021 行业 1/2/3 级分类</td><td class="p-2 border border-slate-200 font-mono">STANDARD=38 AND CANCELDATE IS NULL</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="text-xs text-amber-700 mt-2">⚠️ 排查点：连接必须用 oracledb <b>thick 模式</b> + Instant Client（thin 模式连 11g 直接报 DPY-3010）；SQL 语句末尾不能带分号（ORA-00911）。</div>
+        </div>
+      </div>
+      <!-- 步骤 2 -->
+      <div class="flex gap-3 py-4 border-b border-slate-100">
+        <div class="shrink-0 w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">2</div>
+        <div class="flex-1">
+          <div class="font-bold text-sm">股票池过滤：只留真正的 A 股</div>
+          <div class="text-sm text-slate-600 mt-1">代码前缀 60/68/00/30 <b>且</b> SECUCATEGORY=1。双条件缺一不可——行情表里混着指数、基金、债券（比如 00 开头的上证国债指数），只按前缀过滤会把它们当股票算进来。</div>
+          <div class="text-xs text-amber-700 mt-2">⚠️ 排查点：股票总数对不上（当前应为 5,208 只）先查这个过滤条件有没有被改动。</div>
+        </div>
+      </div>
+      <!-- 步骤 3 -->
+      <div class="flex gap-3 py-4 border-b border-slate-100">
+        <div class="shrink-0 w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">3</div>
+        <div class="flex-1">
+          <div class="font-bold text-sm">三表合并成"一张主表"</div>
+          <div class="text-sm text-slate-600 mt-1">前复权价格（CS_STOCKADJPERFORMANCE）按"股票＋日期"对齐成交额和原始收盘价（QT_DAILYQUOTE <b>UNION ALL</b> LC_STIBDAILYQUOTE）。价格用前复权、成交额用真实值，互不干扰。</div>
+          <div class="text-xs text-amber-700 mt-2">⚠️ 排查点：科创板成交额全是 0 → 九成是漏了 UNION 那张科创板表。</div>
+        </div>
+      </div>
+      <!-- 步骤 4 -->
+      <div class="flex gap-3 py-4 border-b border-slate-100">
+        <div class="shrink-0 w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">4</div>
+        <div class="flex-1">
+          <div class="font-bold text-sm">定游戏规则：4 个决定准确性的中间概念</div>
+          <div class="grid md:grid-cols-2 gap-2 mt-2 text-xs">
+            <div class="bg-slate-50 rounded-lg p-3"><b>① 有效交易日（IS_TRADING）</b><br/>当天成交额 &gt; 0 才算真交易。停牌日行情表有"占位行"——价格冻结成前一天、成交额为 0。它是识别停牌的唯一可靠信号。</div>
+            <div class="bg-slate-50 rounded-lg p-3"><b>② 市场交易日序号（MARKET_TD_SEQ）</b><br/>把日历编成 1,2,3…连续号。相邻两天的号差必须是 1；差值变大 = 中间隔着停牌或缺口，直接判"不连续"。</div>
+            <div class="bg-slate-50 rounded-lg p-3"><b>③ 有效交易日序号（TRADING_DAY_RN）</b><br/>剔除停牌占位行后重新编号。算新高要看"第 250 个<b>有效</b>交易日的前高"，用这个号。</div>
+            <div class="bg-slate-50 rounded-lg p-3"><b>④ 上市交易日数（LISTING_TDAYS）</b><br/>从上市日数到今天的市场交易日个数（头尾都算）。用交易日历数，<b>不是</b>自然日差。</div>
+          </div>
+          <div class="text-xs text-amber-700 mt-2">⚠️ 排查点：所有"连续 N 天"的因子都同时做双保险——序号等差 <b>＋</b> 窗口内成交额全 &gt; 0。任一不满足即整条否决。</div>
+        </div>
+      </div>
+      <!-- 步骤 5 -->
+      <div class="flex gap-3 py-4 border-b border-slate-100">
+        <div class="shrink-0 w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">5</div>
+        <div class="flex-1">
+          <div class="font-bold text-sm">一次性 SQL 计算：均线系统 ＋ 9 大因子</div>
+          <div class="text-sm text-slate-600 mt-1">全部在 <code class="bg-slate-100 px-1 rounded">ma_features_200d_adj.sql</code> 里用窗口函数（滚动平均 / 滚动最大 / 取前 N 行）在数据库端一次算完，<code class="bg-slate-100 px-1 rounded">run_fast_200d_export.py</code> 流式落盘成 <b>ma_features_200d_adj.csv（103.8 万行 × 52 列）</b>。52 列里除了标签，还特意保留了回撤、量比、均线距离等<b>中间指标列</b>，就是给排查用的（见症状排查表）。</div>
+          <div class="text-xs text-amber-700 mt-2">⚠️ 排查点：中间计算全精度、不四舍五入；CSV 里的均线只保留 3 位小数是<b>展示层</b>行为，判定标签用的始终是全精度。</div>
+        </div>
+      </div>
+      <!-- 步骤 6 -->
+      <div class="flex gap-3 py-4 border-b border-slate-100">
+        <div class="shrink-0 w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">6</div>
+        <div class="flex-1">
+          <div class="font-bold text-sm">切片与校验：分盘前先质检</div>
+          <div class="text-sm text-slate-600 mt-1"><code class="bg-slate-100 px-1 rounded">convert_200d_to_json.py</code> 按交易日切成 200 个 JSON 切片，注入申万行业，生成 dates_index.json / stock_200d_summary.json / meta.json（覆盖期、总数等元信息）。然后做硬校验：<b>切片必须 200 个、科创板有效成交额覆盖率必须 100%，任一不达标直接拒绝发布</b>。</div>
+          <div class="text-xs text-amber-700 mt-2">⚠️ 排查点：发布失败看日志里哪条校验拦下的，倒回对应环节查。</div>
+        </div>
+      </div>
+      <!-- 步骤 7 -->
+      <div class="flex gap-3 py-4 border-b border-slate-100">
+        <div class="shrink-0 w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">7</div>
+        <div class="flex-1">
+          <div class="font-bold text-sm">原子发布：换菜单不砸盘子</div>
+          <div class="text-sm text-slate-600 mt-1">新切片写入带时间戳的版本目录 <code class="bg-slate-100 px-1 rounded">data_versions/ver_时间戳/</code>，然后用 <code class="bg-slate-100 px-1 rounded">os.replace</code> 一步把 <code class="bg-slate-100 px-1 rounded">data</code> 软链接原子切过去——正在看网页的人完全无感；旧版本目录都留着，随时可以切回去回滚。</div>
+          <div class="text-xs text-amber-700 mt-2">⚠️ 排查点：怀疑数据没更新 → <code class="bg-slate-100 px-1 rounded">ls -l data</code> 看软链接指向哪个版本目录。</div>
+        </div>
+      </div>
+      <!-- 步骤 8 -->
+      <div class="flex gap-3 py-4">
+        <div class="shrink-0 w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">8</div>
+        <div class="flex-1">
+          <div class="font-bold text-sm">前端展示：只读切片，不做计算</div>
+          <div class="text-sm text-slate-600 mt-1"><code class="bg-slate-100 px-1 rounded">server.py</code> 在本地 8089 端口提供无缓存服务，<code class="bg-slate-100 px-1 rounded">index.html</code> 读 dates_index / meta / 切片渲染看板。网页上所有数字都来自切片，<b>零硬编码</b>（覆盖期文案、全市场总数均由 meta.json 动态驱动）。</div>
+          <div class="text-xs text-amber-700 mt-2">⚠️ 排查点：网页数字和 CSV 对不上 → 先强刷页面（服务已禁缓存），再核对 data 软链接指向。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 通用口径规则 ===== -->
+  <section class="card" id="rules">
+    <h2 class="text-lg font-bold mb-3">📐 通用口径规则——8 条铁律（看懂这 8 条，90% 的疑问都能自己解答）</h2>
+    <div class="grid md:grid-cols-2 gap-3 text-sm">
+      <div class="border border-slate-200 rounded-lg p-3"><b>1️⃣ 价格一律用前复权精确价</b><br/><span class="text-slate-600">除权除息会把价格"砍一刀"，在均线上制造假拐点。所有计算用 CS_STOCKADJPERFORMANCE 的前复权 OHLC；原始收盘价只做展示对照。</span></div>
+      <div class="border border-slate-200 rounded-lg p-3"><b>2️⃣ 成交额用真实值、不复权</b><br/><span class="text-slate-600">单位是元，"1 亿"=100,000,000。主板/创业板来自 QT_DAILYQUOTE，科创板来自 LC_STIBDAILYQUOTE。</span></div>
+      <div class="border border-slate-200 rounded-lg p-3"><b>3️⃣ 红K / 绿K 的定义</b><br/><span class="text-slate-600">前复权收盘 &gt; 开盘 = 红；收盘 &lt; 开盘 = 绿；<b>平盘或停牌既不算红也不算绿</b>（用开盘收盘比，不用涨跌幅）。</span></div>
+      <div class="border border-slate-200 rounded-lg p-3"><b>4️⃣ 严格边界</b><br/><span class="text-slate-600">">"就是严格大于，没有"约等于"；分母为空或 ≤0 时条件直接不成立；中间计算不舍入，仅展示层保留小数。</span></div>
+      <div class="border border-slate-200 rounded-lg p-3"><b>5️⃣ 新高互斥降级链</b><br/><span class="text-slate-600">ALL_TIME ＞ D500 ＞ D250 ＞ NONE，最多只能中一级。没破大级别但破了小级别，就"降级"记到小级别。</span></div>
+      <div class="border border-slate-200 rounded-lg p-3"><b>6️⃣ 标签优先级（只影响"主标签"展示）</b><br/><span class="text-slate-600">HL_5R ＞ 5R ＞ HIGH_ALL ＞ HIGH_500 ＞ HIGH_250 ＞ HL_AMO ＞ AMO ＞ MA377 ＞ MA250。布尔标签可多选并存，展示时按此挑一个"主打"。</span></div>
+      <div class="border border-slate-200 rounded-lg p-3 bg-amber-50"><b>7️⃣ 两种"窗口"口径的区别（最容易混淆！）</b><br/><span class="text-slate-600"><b>均线</b>用"物理行"窗口——停牌占位行的冻结价<b>参与</b>平均；<b>新高/连红/放量/支撑</b>用"有效交易日"窗口——停牌行<b>剔除</b>后再数天数，且序号必须连续。</span></div>
+      <div class="border border-slate-200 rounded-lg p-3"><b>8️⃣ 无未来数据泄露</b><br/><span class="text-slate-600">任何 T 日的标签只用 T 日及以前的数据。所有窗口（如"前 15 日最大成交额"）都不包含当天，杜绝"用明天算今天"。</span></div>
+    </div>
+  </section>
+
+  <!-- ===== 因子清单 ===== -->
+  <section class="card">
+    <h2 class="text-lg font-bold mb-1">📊 10 个标签是什么？核对结果如何？</h2>
+    <p class="text-xs text-slate-500 mb-4">「命中次数」= 200 个交易日里全市场累计打中该标签的次数（股票数 × 天数）</p>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-collapse">
+        <thead><tr class="bg-slate-50 text-left text-slate-500 text-xs">
+          <th class="p-2 border border-slate-200">标签</th>
+          <th class="p-2 border border-slate-200">大白话解释</th>
+          <th class="p-2 border border-slate-200 text-right">命中次数</th>
+          <th class="p-2 border border-slate-200 text-center">核对</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="p-2 border border-slate-200 font-bold">📈 均线多头 LABEL</td><td class="p-2 border border-slate-200">5/10/20/60/120/250 六条均价线像楼梯一样整齐向上，且今天昨天都如此——趋势最强的形态</td><td class="p-2 border border-slate-200 text-right font-bold">63,718</td><td class="p-2 border border-slate-200 text-center text-emerald-600 font-bold">✅</td></tr>
+          <tr class="bg-amber-50/50"><td class="p-2 border border-slate-200 font-bold">🌅 HL+5R 底部五阳</td><td class="p-2 border border-slate-200">深跌 25% 以上后趴在低位，连续 5 天温和收红——"超跌后底部连涨"</td><td class="p-2 border border-slate-200 text-right font-bold">8,311</td><td class="p-2 border border-slate-200 text-center text-emerald-600 font-bold">✅</td></tr>
+          <tr><td class="p-2 border border-slate-200 font-bold">🔴 5R 五连阳</td><td class="p-2 border border-slate-200">连续 5 天收红且前一天收绿——"连涨启动形态"（不算底部的）</td><td class="p-2 border border-slate-200 text-right font-bold">9,982</td><td class="p-2 border border-slate-200 text-center text-emerald-600 font-bold">✅</td></tr>
+          <tr class="bg-yellow-50/60"><td class="p-2 border border-slate-200 font-bold">👑 覆盖期新高</td><td class="p-2 border border-slate-200">今天最高价突破了数据库覆盖期（2024-07-10 以来）所有前高，且上市超过 500 个交易日</td><td class="p-2 border border-slate-200 text-right font-bold">27,373</td><td class="p-2 border border-slate-200 text-center text-emerald-600 font-bold">✅</td></tr>
+          <tr><td class="p-2 border border-slate-200 font-bold">🔥 500日新高</td><td class="p-2 border border-slate-200">突破过去 500 个交易日最高价（没破覆盖期高的）</td><td class="p-2 border border-slate-200 text-right font-bold">0</td><td class="p-2 border border-slate-200 text-center text-emerald-600 font-bold">✅</td></tr>
+          <tr><td class="p-2 border border-slate-200 font-bold">⚡ 250日新高</td><td class="p-2 border border-slate-200">突破过去 250 个交易日最高价——约一年的新高</td><td class="p-2 border border-slate-200 text-right font-bold">2,772</td><td class="p-2 border border-slate-200 text-center text-emerald-600 font-bold">✅</td></tr>
+          <tr class="bg-sky-50/50"><td class="p-2 border border-slate-200 font-bold">💎 底部放量 HL+AMO</td><td class="p-2 border border-slate-200">深跌 25% 后低位放量大涨——"超跌后底部放量"</td><td class="p-2 border border-slate-200 text-right font-bold">6,977</td><td class="p-2 border border-slate-200 text-center text-emerald-600 font-bold">✅</td></tr>
+          <tr><td class="p-2 border border-slate-200 font-bold">🚀 放量突破 AMO</td><td class="p-2 border border-slate-200">成交额过亿、比前 15 天最高还多 20% 以上、是前一天 1.8 倍以上，当天收红且近期没暴涨——"带量大涨"</td><td class="p-2 border border-slate-200 text-right font-bold">18,008</td><td class="p-2 border border-slate-200 text-center text-emerald-600 font-bold">✅</td></tr>
+          <tr><td class="p-2 border border-slate-200 font-bold">🛡️ MA377 支撑</td><td class="p-2 border border-slate-200">连续 4 天贴着 377 日均线（±2%~+7%）横盘，至少一天收红——"回踩长期线不破"</td><td class="p-2 border border-slate-200 text-right font-bold">44,477</td><td class="p-2 border border-slate-200 text-center text-emerald-600 font-bold">✅</td></tr>
+          <tr><td class="p-2 border border-slate-200 font-bold">🛡️ MA250 支撑</td><td class="p-2 border border-slate-200">同上，贴的是 250 日线（俗称年线）</td><td class="p-2 border border-slate-200 text-right font-bold">100,358</td><td class="p-2 border border-slate-200 text-center text-emerald-600 font-bold">✅</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="plain mt-4">💡 为什么「500日新高」是 0 次？数据库只存了 512 个交易日的历史，能凑满"前 500 天且没破覆盖期高"的样本本来就极少——这是数据覆盖期短造成的正常现象，不是算错了。</div>
+  </section>
+
+  <!-- ===== 逐因子详细口径 ===== -->
+  <section class="card" id="specs">
+    <h2 class="text-lg font-bold mb-1">🧾 逐因子详细加工口径（点击展开）</h2>
+    <p class="text-xs text-slate-500 mb-4">每张卡片：精确条件 → 为什么这么设计（防什么坑）→ 怀疑打错时怎么排查。表格里的 T0 = 当天，T-1 = 上一个交易日，依此类推。</p>
+
+    <details class="border border-slate-200 rounded-lg mb-2">
+      <summary class="p-3 font-bold text-sm cursor-pointer hover:bg-slate-50 rounded-lg">📈 均线多头 LABEL —— 六线楼梯整齐向上</summary>
+      <div class="px-4 pb-4 space-y-3 text-sm">
+        <table class="w-full text-xs border-collapse">
+          <thead><tr class="bg-slate-50 text-left text-slate-500"><th class="p-2 border border-slate-200 w-24">条件</th><th class="p-2 border border-slate-200">精确口径</th><th class="p-2 border border-slate-200">为什么</th></tr></thead>
+          <tbody>
+            <tr><td class="p-2 border border-slate-200 font-bold">样本足够</td><td class="p-2 border border-slate-200">该股行情 ≥ 250 行（次新股不够不参与）</td><td class="p-2 border border-slate-200">MA250 需要满 250 个样本</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">时间相邻</td><td class="p-2 border border-slate-200">DAY_GAP = 1（昨天是紧邻的市场交易日）</td><td class="p-2 border border-slate-200">停牌后跳空比较会失真</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">双日排列</td><td class="p-2 border border-slate-200">今天、昨天都满足 MA5＞MA10＞MA20＞MA60＞MA120＞MA250（严格大于）</td><td class="p-2 border border-slate-200">连续两天成立才排除单日噪声</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">六线全升</td><td class="p-2 border border-slate-200">六条均线今天的值都严格大于昨天的值</td><td class="p-2 border border-slate-200">排列＋向上同时成立才是"最强形态"</td></tr>
+          </tbody>
+        </table>
+        <p class="text-xs text-slate-600">均线口径：最近 N 个<b>物理行</b>（含停牌占位行，冻结价参与平均）的前复权收盘均价；判定用全精度。</p>
+        <div class="text-xs text-amber-700">🔍 排查：看 CSV 的 MA5~MA250 与 PREV_MA* 共 12 列是否满足排列和上升，再看 DAY_GAP 列。注意：均线接近平盘（如停牌冻结）时"严格大于"不成立，标签为 0 是<b>正确</b>行为（见案例二 300360）。</div>
+      </div>
+    </details>
+
+    <details class="border border-slate-200 rounded-lg mb-2">
+      <summary class="p-3 font-bold text-sm cursor-pointer hover:bg-slate-50 rounded-lg">🌅 HL+5R 底部五阳 —— 深跌后低位温和五连红</summary>
+      <div class="px-4 pb-4 space-y-3 text-sm">
+        <table class="w-full text-xs border-collapse">
+          <thead><tr class="bg-slate-50 text-left text-slate-500"><th class="p-2 border border-slate-200 w-24">条件</th><th class="p-2 border border-slate-200">精确口径</th><th class="p-2 border border-slate-200">为什么</th></tr></thead>
+          <tbody>
+            <tr><td class="p-2 border border-slate-200 font-bold">跌得深</td><td class="p-2 border border-slate-200">1 − (最近10天最低价 ÷ T-10~T-179 最高价) ＞ 25%</td><td class="p-2 border border-slate-200">只找从高点深跌 ≥25% 的</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">还在低位</td><td class="p-2 border border-slate-200">(最近10天最低价 ÷ T-10~T-39 最低价) − 1 ＜ 10%</td><td class="p-2 border border-slate-200">排除已经反弹起来的</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">五连红</td><td class="p-2 border border-slate-200">T0~T-4 五天全部收红</td><td class="p-2 border border-slate-200">温和连续买盘</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">涨得慢</td><td class="p-2 border border-slate-200">今收 ÷ T-4 开盘 − 1 ＜ 13%</td><td class="p-2 border border-slate-200">排除五天暴涨的（那不是"底部温和"）</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">无停牌</td><td class="p-2 border border-slate-200">T0~T-179 共 180 天成交额全＞0 且序号等差</td><td class="p-2 border border-slate-200">停牌会污染回撤和反弹的计算</td></tr>
+          </tbody>
+        </table>
+        <div class="text-xs text-amber-700">🔍 排查：CSV 三列直接对数——DRAWDOWN_180_PCT（应＞25）、LOW_REBOUND_30_PCT（应＜10）、FIVE_DAY_GAIN_PCT（应＜13）。</div>
+      </div>
+    </details>
+
+    <details class="border border-slate-200 rounded-lg mb-2">
+      <summary class="p-3 font-bold text-sm cursor-pointer hover:bg-slate-50 rounded-lg">🔴 5R 五连阳 —— 绿转红的连涨启动</summary>
+      <div class="px-4 pb-4 space-y-3 text-sm">
+        <table class="w-full text-xs border-collapse">
+          <thead><tr class="bg-slate-50 text-left text-slate-500"><th class="p-2 border border-slate-200 w-24">条件</th><th class="p-2 border border-slate-200">精确口径</th><th class="p-2 border border-slate-200">为什么</th></tr></thead>
+          <tbody>
+            <tr><td class="p-2 border border-slate-200 font-bold">五连红</td><td class="p-2 border border-slate-200">T0~T-4 五天全部收红</td><td class="p-2 border border-slate-200">连续上涨</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">前一天绿</td><td class="p-2 border border-slate-200">T-5 收绿</td><td class="p-2 border border-slate-200">强调"由绿转红"的启动点</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">不算底部</td><td class="p-2 border border-slate-200">不满足 HL+5R（HL+5R 优先，二者强制互斥）</td><td class="p-2 border border-slate-200">同一天不可能既"底部五阳"又"普通五连阳"</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">无停牌</td><td class="p-2 border border-slate-200">T0~T-5 六天连续真交易</td><td class="p-2 border border-slate-200">防停牌占位行伪装红K</td></tr>
+          </tbody>
+        </table>
+        <div class="text-xs text-amber-700">🔍 排查：先确认没中 HL_5R（互斥），再翻这 6 天的红绿 K。</div>
+      </div>
+    </details>
+
+    <details class="border border-slate-200 rounded-lg mb-2">
+      <summary class="p-3 font-bold text-sm cursor-pointer hover:bg-slate-50 rounded-lg">👑🔥⚡ 创新高三兄弟 —— 覆盖期 / 500日 / 250日（互斥降级）</summary>
+      <div class="px-4 pb-4 space-y-3 text-sm">
+        <div class="plain">三兄弟共用一套"前高"数据：把停牌占位行剔除后，取<b>之前所有有效交易日</b>的最高价，当天最高价必须<b>严格突破</b>才算。停牌当天不创新高。</div>
+        <table class="w-full text-xs border-collapse">
+          <thead><tr class="bg-slate-50 text-left text-slate-500"><th class="p-2 border border-slate-200 w-28">级别</th><th class="p-2 border border-slate-200">精确口径（按顺序判定，中了高级别就不看低级别）</th></tr></thead>
+          <tbody>
+            <tr class="bg-yellow-50/60"><td class="p-2 border border-slate-200 font-bold">ALL_TIME 覆盖期新高</td><td class="p-2 border border-slate-200">当天真交易 ＋ 上市 ＞ 500 个交易日 ＋ 最高价突破覆盖期（2024-07-10 起）全部前高</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">D500 五百日新高</td><td class="p-2 border border-slate-200">上市 ＞ 500 天 ＋ 有效交易日 ≥ 501 ＋ 突破前 500 个有效日高点（且没中 ALL_TIME）</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">D250 二百五日新高</td><td class="p-2 border border-slate-200">上市 ＞ 250 天 ＋ 有效交易日 ≥ 251 ＋ 突破前 250 个有效日高点（且没中上面两级）</td></tr>
+          </tbody>
+        </table>
+        <p class="text-xs text-slate-600">次新股规则：上市不满 500 天的即使涨破上市以来所有高点，也<b>不能</b>记 ALL_TIME，只要上市满 250 天就降级记 D250——防止"上市即巅峰"的次新股刷屏新高榜。</p>
+        <div class="text-xs text-amber-700">🔍 排查：看 HIGH_TYPE 列（ALL_TIME / D500 / D250 / NONE）与三个布尔列是否一致；怀疑虚高 → 查该股上市日期算 LISTING_TDAYS、再查当天成交额是否为 0（停牌）。</div>
+      </div>
+    </details>
+
+    <details class="border border-slate-200 rounded-lg mb-2">
+      <summary class="p-3 font-bold text-sm cursor-pointer hover:bg-slate-50 rounded-lg">🚀 AMO 放量突破 —— 带量大涨（6 道闸门全开才算）</summary>
+      <div class="px-4 pb-4 space-y-3 text-sm">
+        <table class="w-full text-xs border-collapse">
+          <thead><tr class="bg-slate-50 text-left text-slate-500"><th class="p-2 border border-slate-200 w-24">闸门</th><th class="p-2 border border-slate-200">精确口径</th><th class="p-2 border border-slate-200">为什么</th></tr></thead>
+          <tbody>
+            <tr><td class="p-2 border border-slate-200 font-bold">量级</td><td class="p-2 border border-slate-200">当天成交额 ＞ 1 亿元</td><td class="p-2 border border-slate-200">小票日常量太小没有意义</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">突破量</td><td class="p-2 border border-slate-200">＞ 1.2 × 前15日最大成交额</td><td class="p-2 border border-slate-200">比近期任何一天都明显放大</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">倍量</td><td class="p-2 border border-slate-200">＞ 1.8 × 昨日，且 ＞ 1.8 × 前5日/前10日/前15日均量（四项全要）</td><td class="p-2 border border-slate-200">排除"矮子里拔将军"</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">方向</td><td class="p-2 border border-slate-200">当天收红</td><td class="p-2 border border-slate-200">放量下跌不算</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">克制</td><td class="p-2 border border-slate-200">10日涨幅 ＜ 50%</td><td class="p-2 border border-slate-200">排除已经暴涨过的（追高风险）</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">无停牌</td><td class="p-2 border border-slate-200">T0~T-15 共 16 天全部真交易且序号等差</td><td class="p-2 border border-slate-200">停牌会 fake 出"倍量"假象（见案例一 688012）</td></tr>
+          </tbody>
+        </table>
+        <p class="text-xs text-slate-600">注意：所有"前 N 日"统计都<b>不含当天</b>，防止用自己证明自己。</p>
+        <div class="text-xs text-amber-700">🔍 排查：CSV 五列直接对数——AMT_RATIO_PREV / MA5 / MA10 / MA15 应全部 ＞ 1.8，AMT_RATIO_MAX15 应 ＞ 1.2，RETURN_10_PCT ＜ 50；还不中就查窗口 16 天里有没有成交额为 0 的停牌日。</div>
+      </div>
+    </details>
+
+    <details class="border border-slate-200 rounded-lg mb-2">
+      <summary class="p-3 font-bold text-sm cursor-pointer hover:bg-slate-50 rounded-lg">💎 HL+AMO 底部放量 —— 超跌后的带量大涨</summary>
+      <div class="px-4 pb-4 space-y-3 text-sm">
+        <p class="text-slate-600">在 AMO 全部 6 道闸门之上，再加两道：</p>
+        <table class="w-full text-xs border-collapse">
+          <thead><tr class="bg-slate-50 text-left text-slate-500"><th class="p-2 border border-slate-200 w-24">加码条件</th><th class="p-2 border border-slate-200">精确口径</th><th class="p-2 border border-slate-200">为什么</th></tr></thead>
+          <tbody>
+            <tr><td class="p-2 border border-slate-200 font-bold">此前深跌</td><td class="p-2 border border-slate-200">1 − (T-1收盘 ÷ T-2~T-181 最高价) ＞ 25%</td><td class="p-2 border border-slate-200">放量必须发生在深跌后的低位</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">窗口更长</td><td class="p-2 border border-slate-200">T0~T-181 共 182 天无停牌</td><td class="p-2 border border-slate-200">回撤计算需要更长的干净窗口</td></tr>
+          </tbody>
+        </table>
+        <div class="text-xs text-amber-700">🔍 排查：先过 AMO 的排查清单，再看 PREV_DRAWDOWN_180_PCT 列（应＞25）。AMO 与 HL+AMO 允许同天双命中。</div>
+      </div>
+    </details>
+
+    <details class="border border-slate-200 rounded-lg">
+      <summary class="p-3 font-bold text-sm cursor-pointer hover:bg-slate-50 rounded-lg">🛡️ MA250 / MA377 支撑 —— 回踩长期线不破</summary>
+      <div class="px-4 pb-4 space-y-3 text-sm">
+        <div class="plain">打比方：股价像皮球落回桌面（长期均线）弹起来——连续 4 天贴着均线窄幅横盘但没跌穿。</div>
+        <table class="w-full text-xs border-collapse">
+          <thead><tr class="bg-slate-50 text-left text-slate-500"><th class="p-2 border border-slate-200 w-24">条件</th><th class="p-2 border border-slate-200">精确口径</th><th class="p-2 border border-slate-200">为什么</th></tr></thead>
+          <tbody>
+            <tr><td class="p-2 border border-slate-200 font-bold">贴线四天</td><td class="p-2 border border-slate-200">T0~T-3 每天都满足 −2% ≤ (收盘 ÷ MA_N − 1) ≤ ＋7%（闭区间，N=250 或 377）</td><td class="p-2 border border-slate-200">既没跌穿（−2%下限）也没远离（+7%上限）</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">有买盘</td><td class="p-2 border border-slate-200">四天中至少一天收红</td><td class="p-2 border border-slate-200">纯阴跌不算企稳</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">样本完整</td><td class="p-2 border border-slate-200">MA250 需行情 ≥ 253 行；MA377 需 ≥ 380 行</td><td class="p-2 border border-slate-200">四天每天的均线都要有完整样本</td></tr>
+            <tr><td class="p-2 border border-slate-200 font-bold">无停牌</td><td class="p-2 border border-slate-200">T0~T-3 四天连续真交易且序号等差</td><td class="p-2 border border-slate-200">停牌冻结价会 fake 出"稳定贴线"</td></tr>
+          </tbody>
+        </table>
+        <div class="text-xs text-amber-700">🔍 排查：看 DIST_MA250_PCT / DIST_MA377_PCT 列，连续 4 天的值都应落在 −2 ~ +7 之间；MA_SUPPORT_TYPE 列显示 BOTH（双中）/ MA377 / MA250 / NONE。</div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===== 三个典型案例 ===== -->
+  <section class="card">
+    <h2 class="text-lg font-bold mb-3">🕵️ 三个典型案例（都是系统答对了）</h2>
+
+    <div class="border border-slate-200 rounded-lg p-4 mb-3">
+      <div class="font-bold mb-1">案例一：中微公司（688012）——停牌 9 天后的"假放量"</div>
+      <p class="text-sm leading-6">它停牌了 9 天（12月19日~31日），复牌第一天放出 84.7 亿巨量。老逻辑会把这天误标为"放量突破"。现在的系统检查统计窗口时发现里面混着停牌日，<b>正确地拒绝了</b>这个标签。✅ 这是本次验收重点修复的场景，实测有效。</p>
+    </div>
+
+    <div class="border border-slate-200 rounded-lg p-4 mb-3">
+      <div class="font-bold mb-1">案例二：顺网科技（300360）——分毫不差的平局</div>
+      <p class="text-sm leading-6">核对脚本一度报告它有一天的"均线多头"标错了。用高精度算术解剖后发现：该股停牌期间价格冻结，导致 5 日均价今天和昨天<b>完全相等</b>（都是 17.29），"严格大于"不成立，标签应该是 0——<b>系统判对了</b>，反而是核对脚本自己的小数点误差（小数点后 15 位）报了假警。✅</p>
+    </div>
+
+    <div class="border border-slate-200 rounded-lg p-4">
+      <div class="font-bold mb-1">案例三：次新股的"历史新高"降级</div>
+      <p class="text-sm leading-6">一只上市不到 500 个交易日的次新股哪怕涨破了上市以来所有高点，也<b>不会</b>被标成"覆盖期新高"，只记为"250日新高"。实测 2,772 条 250 日新高里，有 426 条正是这种降级情形，和老股票的 2,346 条各归各位。✅ 防止"上市就巅峰"的次新股刷屏新高榜。</p>
+    </div>
+  </section>
+
+  <!-- ===== 核对中澄清的"虚惊" ===== -->
+  <section class="card">
+    <h2 class="text-lg font-bold mb-3">💬 核对中出现的 4 次"虚惊"，都已查明原因</h2>
+    <ul class="text-sm space-y-2 list-disc pl-5 leading-6">
+      <li><b>2.1 万处均线数值"对不上"？</b>——差值全是 0.0005 以内：报表里的均线保留了 3 位小数方便看，而打标签用的是全精度数值。设计如此（需求文档明确规定"中间计算不舍入，仅展示层舍入"）。</li>
+      <li><b>309 处标签"对不上"？</b>——用保留 3 位小数的数值反推标签，在均线几乎持平的日子天然判不准（约占 0.3%）；换全精度重算后零差异。</li>
+      <li><b>300360 平局假警报</b>——见案例二，核对脚本的浮点误差。</li>
+      <li><b>旧版验收报告数字对不上？</b>——不是数据错了，是规则升级了：8月18日晚的旧规则允许次新股直接算"历史新高"，8月19日起按新规则严格降级。新旧数字差异（28,008 → 27,373）与规则改动完全吻合。</li>
+    </ul>
+  </section>
+
+  <!-- ===== 遗留问题 ===== -->
+  <section class="card">
+    <h2 class="text-lg font-bold mb-3">⚠️ 唯一的遗留问题（不影响数据）</h2>
+    <p class="text-sm leading-6">每天跑数的脚本在控制台打印日志时，还把「覆盖期新高」写成旧名字「历史新高」（<code class="bg-slate-100 px-1 rounded text-xs">run_fast_200d_export.py</code> 第 92 行）。<b>只影响日志文案，数据本身完全正确</b>，改一行即可闭环。</p>
+  </section>
+
+  <!-- ===== 结论 ===== -->
+  <section class="bg-emerald-600 text-white rounded-2xl p-6 shadow">
+    <h2 class="text-lg font-bold mb-2">✅ 最终结论</h2>
+    <ul class="text-sm space-y-1.5 list-disc pl-5 leading-6">
+      <li>10 个标签全部核对通过：两套独立算法 10,000 行零差异、103 万行规则检查零违反、27,373 条新高门槛零违规；</li>
+      <li>数据库端、本地端、需求文档、网页终端四方一致，已发布数据与验收报告数字完全吻合；</li>
+      <li>所有疑似问题均已查明为"核对工具自身的精度误差"，生产数据无误；</li>
+      <li>唯一遗留：一处日志文案（P3 级），不影响任何数据正确性。</li>
+    </ul>
+  </section>
+
+  <!-- ===== 症状排查表 ===== -->
+  <section class="card" id="troubleshoot">
+    <h2 class="text-lg font-bold mb-1">🛠️ 症状排查表——遇到问题从这查起</h2>
+    <p class="text-xs text-slate-500 mb-4">按"症状 → 最可能原因 → 去哪确认"组织，覆盖最常见的 6 类问题</p>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs border-collapse">
+        <thead><tr class="bg-slate-50 text-left text-slate-500"><th class="p-2 border border-slate-200 w-56">症状</th><th class="p-2 border border-slate-200 w-64">最可能原因</th><th class="p-2 border border-slate-200">去哪确认</th></tr></thead>
+        <tbody>
+          <tr><td class="p-2 border border-slate-200 font-bold">科创板股票成交额全是 0</td><td class="p-2 border border-slate-200">只查了 QT_DAILYQUOTE（主板表没有 68 开头数据），漏 UNION LC_STIBDAILYQUOTE</td><td class="p-2 border border-slate-200">SQL 里搜 <code>UNION ALL</code>；发布日志里"科创板有效成交额"校验行</td></tr>
+          <tr><td class="p-2 border border-slate-200 font-bold">某股明明放巨量却没中 AMO</td><td class="p-2 border border-slate-200">①16 天窗口里有停牌日 ②某项比值不足 ③当天没收红 ④10日涨幅 ≥50%</td><td class="p-2 border border-slate-200">AMT_RATIO_* 五列 + RETURN_10_PCT 逐项对数；再查 T0~T-15 有无成交额=0 的天</td></tr>
+          <tr><td class="p-2 border border-slate-200 font-bold">创新高数量突然变化</td><td class="p-2 border border-slate-200">①次新股 500 天门槛/降级规则 ②停牌行混入 ③覆盖期边界变化</td><td class="p-2 border border-slate-200">HIGH_TYPE 分布 + 涉事股票上市日期（算 LISTING_TDAYS）+ 当天成交额</td></tr>
+          <tr><td class="p-2 border border-slate-200 font-bold">自己算的均线多头和系统对不上</td><td class="p-2 border border-slate-200">①用了四舍五入后的均线 ②用自然日没排除停牌跳空 ③停牌日处理口径不同（均线含冻结价）</td><td class="p-2 border border-slate-200">按"全精度 + 物理行窗口 + DAY_GAP=1"重算；参考 regression/verify_label_exact.py</td></tr>
+          <tr><td class="p-2 border border-slate-200 font-bold">网页数字和 CSV 不一致</td><td class="p-2 border border-slate-200">浏览器缓存旧切片 / data 软链接没切到最新版本</td><td class="p-2 border border-slate-200">强刷页面（服务已禁缓存）；<code>ls -l data</code> 看软链接指向的版本目录</td></tr>
+          <tr><td class="p-2 border border-slate-200 font-bold">当天 19:00 更新没跑成</td><td class="p-2 border border-slate-200">Oracle 不可达 / 源数据未同步 / crontab 未触发</td><td class="p-2 border border-slate-200">logs/daily_update_*.log 末尾退出码；<code>nc -z 127.0.0.1 1521</code> 测连通</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="font-bold text-sm mt-5 mb-2">📋 CSV 排查列速查（52 列里最常用的 14 列）</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs border-collapse">
+        <thead><tr class="bg-slate-50 text-left text-slate-500"><th class="p-2 border border-slate-200 w-44">怀疑哪个因子</th><th class="p-2 border border-slate-200">直接看这些列对数</th></tr></thead>
+        <tbody>
+          <tr><td class="p-2 border border-slate-200">📈 均线多头</td><td class="p-2 border border-slate-200 font-mono">MA5~MA250、PREV_MA*（12列）、DAY_GAP</td></tr>
+          <tr><td class="p-2 border border-slate-200">🌅 HL+5R</td><td class="p-2 border border-slate-200 font-mono">DRAWDOWN_180_PCT(>25)、LOW_REBOUND_30_PCT(<10)、FIVE_DAY_GAIN_PCT(<13)</td></tr>
+          <tr><td class="p-2 border border-slate-200">👑 创新高</td><td class="p-2 border border-slate-200 font-mono">HIGH_TYPE + 涉事股上市日期</td></tr>
+          <tr><td class="p-2 border border-slate-200">🚀 AMO</td><td class="p-2 border border-slate-200 font-mono">TURNOVERVALUE(>1亿)、AMT_RATIO_PREV/MA5/MA10/MA15(>1.8)、AMT_RATIO_MAX15(>1.2)、RETURN_10_PCT(<50)</td></tr>
+          <tr><td class="p-2 border border-slate-200">💎 HL+AMO</td><td class="p-2 border border-slate-200 font-mono">PREV_DRAWDOWN_180_PCT(>25) ＋ AMO 全套</td></tr>
+          <tr><td class="p-2 border border-slate-200">🛡️ 支撑</td><td class="p-2 border border-slate-200 font-mono">DIST_MA250_PCT / DIST_MA377_PCT（连续4天落 −2~+7）、MA_SUPPORT_TYPE</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== 复现 ===== -->
+  <details class="card">
+    <summary class="font-bold text-sm cursor-pointer">🔧 附：想自己复跑核对？（点击展开）</summary>
+    <pre class="bg-slate-900 text-slate-100 text-xs rounded-lg p-4 mt-3 overflow-x-auto">PY=python3
+
+# 1) 30 只样本 6,000 行两套算法对答案（含停牌/次新股考题）
+$PY test_30_stocks_full.py
+
+# 2) 全面板统计与规则检查
+$PY regression/verify_panel_stats.py
+
+# 3) 新高门槛全量核对 + 随机 20 只样本重算
+$PY regression/verify_db_deep.py
+
+# 4) 均线标签高精度核对
+$PY regression/verify_label_exact.py</pre>
+    <p class="text-xs text-slate-500 mt-2">需要内网 Oracle 数据库（127.0.0.1）可达。详细技术版报告见 <code>docs/9因子核对分析报告.md</code>。</p>
+  </details>
+
+  <footer class="text-center text-xs text-slate-400 pb-4">A 股量化特征工程系统 · 9 因子核对分析报告 · 2026-08-19</footer>
+</div>
+</body>
+</html>

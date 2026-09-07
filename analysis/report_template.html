@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>因子数据深度分析与下一版本迭代建议</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text>"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  .card { background:#fff; border-radius:.75rem; border:1px solid #e2e8f0; box-shadow:0 1px 2px rgba(0,0,0,.05); padding:1.25rem; }
+  .plain { background:#fffbeb; border-left:4px solid #fbbf24; padding:.5rem 1rem; font-size:.875rem; color:#78350f; border-radius:0 .5rem .5rem 0; }
+  .good { background:#ecfdf5; border-left:4px solid #10b981; padding:.5rem 1rem; font-size:.875rem; color:#064e3b; border-radius:0 .5rem .5rem 0; }
+  .bad  { background:#fef2f2; border-left:4px solid #ef4444; padding:.5rem 1rem; font-size:.875rem; color:#7f1d1d; border-radius:0 .5rem .5rem 0; }
+  .chart { width:100%; height:380px; }
+  .chart-sm { width:100%; height:300px; }
+  table.n { font-size:.8rem; }
+  table.n th { background:#f8fafc; text-align:left; padding:.4rem .6rem; font-weight:600; }
+  table.n td { padding:.4rem .6rem; border-top:1px solid #f1f5f9; }
+  .chip { display:inline-block; padding:.1rem .5rem; border-radius:9999px; font-size:.72rem; font-weight:600; }
+</style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+<div class="max-w-5xl mx-auto p-4 md:p-8 space-y-6">
+
+<!-- ================= 头部 ================= -->
+<header class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl p-6 md:p-8 shadow">
+  <div class="flex items-center gap-3 mb-2">
+    <span class="text-3xl">📈</span>
+    <h1 class="text-xl md:text-2xl font-bold">因子数据深度分析与下一版本迭代建议</h1>
+  </div>
+  <p class="text-blue-100 text-sm mb-4" id="meta-line"></p>
+  <div class="flex flex-wrap gap-2 text-xs font-semibold">
+    <span class="bg-emerald-500 px-3 py-1.5 rounded-lg shadow">✅ high_all / label 有正向预期</span>
+    <span class="bg-red-500 px-3 py-1.5 rounded-lg shadow">⚠️ hl_amo / hl_5r 稳定负超额</span>
+    <span class="bg-amber-500 px-3 py-1.5 rounded-lg shadow">🌐 因子表现强烈依赖市场环境</span>
+    <span class="bg-slate-700/70 px-3 py-1.5 rounded-lg shadow">💡 低成交额是未被捕捉的最强信号</span>
+  </div>
+  <p class="text-blue-100 text-sm mt-3">一句话：<b class="text-white">系统目前只回答"谁命中了"，从不回答"命中之后怎么样"。200 天数据回看：两个因子在稳定亏钱、一个因子结构性死亡、一个全场最强的信号根本没被任何因子使用。</b></p>
+</header>
+
+<nav class="card flex flex-wrap gap-2 text-xs font-semibold !p-3" id="nav"></nav>
+
+<!-- ================= TLDR ================= -->
+<section class="card">
+  <h2 class="text-lg font-bold mb-3">🎯 五个最重要的发现</h2>
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-center mb-3">
+    <div class="bg-emerald-50 rounded-lg p-3"><div class="text-2xl font-extrabold text-emerald-600" id="tldr-ha"></div><div class="text-xs text-slate-500 mt-1">HIGH_ALL 命中后 T+10 超额均值（对照 +0.09%）</div></div>
+    <div class="bg-emerald-50 rounded-lg p-3"><div class="text-2xl font-extrabold text-emerald-600" id="tldr-lab"></div><div class="text-xs text-slate-500 mt-1">均线多头 LABEL 同口径超额均值</div></div>
+    <div class="bg-red-50 rounded-lg p-3"><div class="text-2xl font-extrabold text-red-600" id="tldr-hlamo"></div><div class="text-xs text-slate-500 mt-1">HL+AMO 同口径（两个半场都 ≈ -3%，稳定地差）</div></div>
+    <div class="bg-amber-50 rounded-lg p-3"><div class="text-2xl font-extrabold text-amber-600">0</div><div class="text-xs text-slate-500 mt-1">HIGH_500 全程命中数（覆盖期仅 512 天，结构性死亡）</div></div>
+    <div class="bg-indigo-50 rounded-lg p-3"><div class="text-2xl font-extrabold text-indigo-600">-0.38</div><div class="text-xs text-slate-500 mt-1">log(成交额) 的 ICIR，全场最强信号，无因子捕捉</div></div>
+  </div>
+  <div class="plain">📌 <b>口径说明</b>：超额收益 = 个股收益 − 同期全市场等权收益；对照组为全体股票-日（中位 -1.19% / 均值 +0.09%，A 股个股收益天然左偏，中位数低于均值是常态）。因子好坏看"<b>相对对照的差值</b>"，不看绝对数。</div>
+</section>
+
+<!-- ================= 1 因子全景 ================= -->
+<section class="card" id="sec1">
+  <h2 class="text-lg font-bold mb-2">1️⃣ 因子全景：量级差三个数量级，稳定性差得离谱</h2>
+  <p class="text-sm leading-6 mb-2">200 天里每日命中数的均值、波动和总量差异极大——<b>ma250_support 平均每天命中 502 只（占全市场 9.7%），是"宽网"；hl_5r 平均 42 只但单日能爆发到 682 只（波动率 191%），是"晴雨表"而不是"选股器"</b>。HIGH_500 全程 0 命中：数据覆盖只有 512 个交易日，"上市超 500 天且突破 500 日高但未破覆盖期高"的窗口根本不存在。</p>
+  <div id="chart-daily" class="chart"></div>
+  <div class="plain mt-2">💡 折线可以点图例开关。注意 2026-07-31 前后 <b>hl_5r 单日冲到 682 只</b>——当天正是 label≈19 的极度弱市技术性反弹日：<b>弱市里"180 日回撤&gt;25%"遍地都是，hl_5r 从底部反转精选退化成了弱市反弹大名单</b>。绝对阈值在不同市场环境下含义完全不同。</div>
+  <div class="overflow-x-auto mt-3">
+    <table class="n w-full" id="tbl-totals"></table>
+  </div>
+  <div class="plain mt-2">🏷️ <b>因子其实分两类，但看板混在一起展示</b>：5R / AMO / HL+AMO 是<b>事件型</b>（连续命中中位数 1 天，最长 3 天——"今天发生了"）；MA250 / MA377 支撑是<b>状态型</b>（中位 4-6 天，最长 57 天——"现在处于"）。状态型每天重复出现在列表里，稀释了事件型的信息密度。</div>
+</section>
+
+<!-- ================= 2 前向收益 ================= -->
+<section class="card" id="sec2">
+  <h2 class="text-lg font-bold mb-2">2️⃣ 命中之后怎么样：前向超额收益</h2>
+  <p class="text-sm leading-6 mb-2">对每次因子命中，计算 T+1/5/10/20 日相对全市场等权基准的超额收益。核心读法：<b>均值显著高于对照（+0.09%）的因子有正向预期；中位数主要反映"命中后短期内是继续冲还是回落"</b>。</p>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div>
+      <h3 class="text-sm font-bold mb-1">T+10 超额：中位数 vs 均值</h3>
+      <div id="chart-fwd10" class="chart-sm"></div>
+    </div>
+    <div>
+      <h3 class="text-sm font-bold mb-1">持有期曲线（超额均值）</h3>
+      <div id="chart-horizon" class="chart-sm"></div>
+    </div>
+  </div>
+  <div class="good mt-3">✅ <b>真正有正向预期的是 HIGH_ALL 和 LABEL</b>：HIGH_ALL 均值 +1.53pp、分布右偏且宽度健康（P25 -9.3% / P75 +8.8% / P90 +23.2% / P99 +61%，前 1% 大赢家只贡献 11% 的正收益——不是靠个别妖股撑起来的）；LABEL 均值 +0.90pp 且在强弱两个环境里都为正（+0.91% / +0.65%），是全场最稳健的标签。</div>
+  <div class="bad mt-2">❌ <b>hl_amo 和 hl_5r 是稳定负超额</b>：hl_amo T+10 均值 -1.39%（对照 +0.09%），前半场 -3.2%、后半场 -3.2%，不是噪声而是缺陷。它们依赖的两个核心条件——"180 日回撤深度 dd180"和"放量倍数 amt_ratio"——IC 都约等于零（见第 4 节），<b>等于用没有信息量的条件筛股票</b>。</div>
+  <div class="grid md:grid-cols-2 gap-4 mt-3">
+    <div>
+      <h3 class="text-sm font-bold mb-1">前后半场对比（T+10 超额均值）</h3>
+      <div id="chart-halves" class="chart-sm"></div>
+    </div>
+    <div>
+      <h3 class="text-sm font-bold mb-1">HIGH_ALL 的 T+10 超额分布（百分位）</h3>
+      <div id="chart-dist" class="chart-sm"></div>
+      <p class="text-xs text-slate-500 mt-1">中位数不亏、右尾很长——"以小博大"型动量因子，适合让利润奔跑，不适合要求高胜率。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 3 环境依赖 ================= -->
+<section class="card" id="sec3">
+  <h2 class="text-lg font-bold mb-2">3️⃣ 同一个因子，牛市熊市两副面孔</h2>
+  <p class="text-sm leading-6 mb-2">按当日 LABEL 命中数（市场宽度代理）把 200 天分成强市 1/3 和弱市 1/3，分别统计 T+10 超额均值：</p>
+  <div id="chart-regime" class="chart-sm"></div>
+  <div class="grid md:grid-cols-3 gap-3 mt-3 text-sm">
+    <div class="bg-slate-50 rounded-lg p-3"><b>只在强市工作</b><br/><span class="text-xs text-slate-600">5R（+0.72% → -1.21%）、HIGH_250（+0.97% → -2.75%）：趋势确认型，弱市全是假信号。</span></div>
+    <div class="bg-slate-50 rounded-lg p-3"><b>弱市反而更好</b><br/><span class="text-xs text-slate-600">HIGH_ALL（+1.40% → +2.28%）：弱市里还能创新高的是真强势股，含金量更高。</span></div>
+    <div class="bg-slate-50 rounded-lg p-3"><b>什么环境都稳</b><br/><span class="text-xs text-slate-600">LABEL（+0.91% / +0.65%）：唯一穿越强弱环境的标签。hl_amo 则什么环境都差。</span></div>
+  </div>
+  <div class="plain mt-2">🌐 <b>对迭代的含义</b>：用户在看板里解读任何因子信号都需要市场状态语境，但系统目前没有任何市场状态维度。这次样本还横跨了一次完整牛熊转换（LABEL 从 881 只跌到 69 只）——环境切换只发生一次，结论方向可信、数值不能外推。</div>
+</section>
+
+<!-- ================= 4 IC ================= -->
+<section class="card" id="sec4">
+  <h2 class="text-lg font-bold mb-2">4️⃣ 连续信号的预测力：现有阈值丢掉了大部分信息</h2>
+  <p class="text-sm leading-6 mb-2">不看 0/1 标签，直接对切片里已有的连续指标做<b>日截面 Rank-IC</b>（与 T+10 超额的秩相关，190 个交易日取平均）：</p>
+  <div id="chart-ic" class="chart-sm"></div>
+  <div class="grid md:grid-cols-2 gap-3 mt-3 text-sm">
+    <div class="bg-indigo-50 rounded-lg p-3"><b>🟦 有真实预测力但没被使用</b><br/><span class="text-xs text-slate-600">log(成交额) IC -0.066 / ICIR -0.38（<b>全场最强</b>）；30 日反弹幅度 IC -0.051；偏离 MA250/377 IC ≈ -0.04（贴近均线比远离好）；10 日涨幅 IC -0.029（短期反转）。<b>低成交额、低反弹、贴均线</b>三个方向有信号，但九个因子里没有一个在捕捉它们。</span></div>
+    <div class="bg-red-50 rounded-lg p-3"><b>🟥 现有因子依赖的核心变量反而无信息</b><br/><span class="text-xs text-slate-600">180 日回撤深度 dd180（HL 系列的地基）IC +0.007 ≈ 0；放量倍数 amt_ratio_max15（AMO 系列的地基）IC -0.003 ≈ 0。这两类因子等于在用噪声筛股票——正好解释了第 2 节里它们的负超额。</span></div>
+  </div>
+</section>
+
+<!-- ================= 5 行业板块 ================= -->
+<section class="card" id="sec5">
+  <h2 class="text-lg font-bold mb-2">5️⃣ 行业与板块画像：每个因子都有自己的"口味"</h2>
+  <p class="text-sm leading-6 mb-2">命中数相对全市场基准的行业富集倍数（×基准占比）：</p>
+  <div class="overflow-x-auto">
+    <table class="n w-full" id="tbl-ind"></table>
+  </div>
+  <div class="grid md:grid-cols-3 gap-3 mt-3 text-sm">
+    <div class="bg-slate-50 rounded-lg p-3"><b>HIGH_ALL ≈ 行业动量代理</b><br/><span class="text-xs text-slate-600">电子 2.0×、有色 2.0× 富集——创新高个股的行业集中度本身就是行业轮动信号，值得做成衍生指标。</span></div>
+    <div class="bg-slate-50 rounded-lg p-3"><b>MA 支撑偏防御</b><br/><span class="text-xs text-slate-600">医药生物 1.2-1.3× 富集；科创板只有基准的 0.6-0.7×。</span></div>
+    <div class="bg-slate-50 rounded-lg p-3"><b>板块偏差普遍存在</b><br/><span class="text-xs text-slate-600">科创板 HIGH_ALL 1.4× 超配、创业板 HL+AMO 1.3× 超配——筛选时应意识到因子并非板块中性。</span></div>
+  </div>
+</section>
+
+<!-- ================= 6 迭代建议 ================= -->
+<section class="card" id="sec6">
+  <h2 class="text-lg font-bold mb-3">6️⃣ 下一版本迭代建议</h2>
+
+  <h3 class="font-bold text-blue-700 mb-2">A. 新增 / 修改因子（按数据证据强度排序）</h3>
+  <div class="space-y-2 text-sm mb-4">
+    <div class="flex gap-2"><span class="chip bg-indigo-100 text-indigo-700">A1 证据最强</span><div><b>低流动性 / 低关注度因子</b>：成交额处于自身 60 日低分位 + 价格稳定。ICIR -0.38 全场最强；现有 turnover 字段即可做时序分位版，真换手率需接流通股本（聚源 LC_SHARE 类表）。</div></div>
+    <div class="flex gap-2"><span class="chip bg-indigo-100 text-indigo-700">A2</span><div><b>短期反转因子</b>：ret10 &lt; -X% 且未破位（仍在线上方）。IC -0.029，与现有动量类因子天然互补。</div></div>
+    <div class="flex gap-2"><span class="chip bg-indigo-100 text-indigo-700">A3 零成本</span><div><b>行业新高扩散度（衍生指标）</b>：各申万一级行业内 HIGH_ALL 命中占比 → 行业动量温度计。数据已有，纯展示层加工。</div></div>
+    <div class="flex gap-2"><span class="chip bg-amber-100 text-amber-700">A4 修复</span><div><b>修 hl_amo / hl_5r 的环境淹没</b>：给 dd180&gt;25% 加市场状态门（当日宽度分位）或改相对分位阈值；或基于负超额证据直接降级为观察标签。</div></div>
+    <div class="flex gap-2"><span class="chip bg-amber-100 text-amber-700">A5 重标定</span><div><b>AMO 阈值重标定</b>：放量倍数 IC≈0，1.2×/1.8× 绝对阈值信息量不足，改用成交额 60 日 z-score 或分位数。</div></div>
+    <div class="flex gap-2"><span class="chip bg-slate-200 text-slate-600">A6 阻塞项</span><div><b>落地 4R</b>：建议 T0..T-3 四连红 + T-4 收绿、排除 5R/HL_5R（与 5R 对称），先以影子模式（计算不进主筛选）发布。另：HIGH_500 建议合并进 HIGH_ALL 展示或改用最大可得窗口。</div></div>
+  </div>
+
+  <h3 class="font-bold text-blue-700 mb-2">B. 系统功能</h3>
+  <div class="space-y-2 text-sm mb-4">
+    <div class="flex gap-2"><span class="chip bg-emerald-100 text-emerald-700">B1 最高优先级</span><div><b>因子评价管道</b>：每晚发布时对 T-20 及更早的命中补算前向收益，落成 factor_performance.json（滚动 T+1/5/10/20 超额中位 / 均值 / 胜率 / 半场对比）。这是防止"负超额因子上线半年才发现"的唯一机制，也是所有阈值调优的数据地基。本次的分析脚本可直接改造为原型。</div></div>
+    <div class="flex gap-2"><span class="chip bg-emerald-100 text-emerald-700">B2</span><div><b>因子定义版本化</b>：meta.json 加 factor_version 与阈值清单。没有它，日后无法区分"命中数变了是因子改了还是市场变了"。顺带解决 regression EXPECT 硬编码需手动同步的痛点（改为从发布版本快照派生）。</div></div>
+    <div class="flex gap-2"><span class="chip bg-emerald-100 text-emerald-700">B3</span><div><b>发布健康度监控</b>：08-20 源表回缩到 243 天被护栏正确拦截（实战验证有效），但只是静默拒绝——升级为失败通知 + "数据源覆盖天数趋势"面板，让源表异常可见。</div></div>
+    <div class="flex gap-2"><span class="chip bg-emerald-100 text-emerald-700">B4</span><div><b>市场状态进数据契约</b>：每日 label 命中数 / 上涨家数占比计算成 market_regime 字段写入切片，供前端叠加展示、供未来因子门控使用。</div></div>
+  </div>
+
+  <h3 class="font-bold text-blue-700 mb-2">C. 展示</h3>
+  <div class="space-y-2 text-sm">
+    <div class="flex gap-2"><span class="chip bg-blue-100 text-blue-700">C1</span><div><b>因子命中数时序图</b>（数据已生成 analysis/daily_hit_counts.csv）：加上它，hl_5r 的环境爆发、HIGH_500 的永久归零一眼可见。</div></div>
+    <div class="flex gap-2"><span class="chip bg-blue-100 text-blue-700">C2</span><div><b>因子画像卡</b>：命中率、事件/状态类型、T+N 超额迷你曲线、行业 Top3、板块 vs 基准——把本报告的分析固化为看板常设视图。</div></div>
+    <div class="flex gap-2"><span class="chip bg-blue-100 text-blue-700">C3</span><div><b>事件型 / 状态型分组</b>：MA 支撑类显示"已持续 N 天"而非每天当新事件；stock_200d_summary.json 已有 streak 字段，前端利用即可。</div></div>
+    <div class="flex gap-2"><span class="chip bg-blue-100 text-blue-700">C4</span><div><b>市场状态色带</b>：所有图表底部叠加市场宽度色带——环境依赖是本次最一致的结论，解读信号必需语境。</div></div>
+    <div class="flex gap-2"><span class="chip bg-blue-100 text-blue-700">C5</span><div><b>新高行业热力图</b>：申万一级行业 × 时间的 HIGH_ALL 命中密度，直接呈现行业轮动。</div></div>
+  </div>
+
+  <div class="mt-4 bg-blue-50 border-l-4 border-blue-500 p-3 rounded-r-lg text-sm">
+    <b>建议实施顺序</b>：
+    ① B1 + C1（工作量小、不碰因子定义，系统立刻从"信号列表"升级为"可评估的信号系统"）
+    → ② B2（为阈值调整建立对照基础）
+    → ③ A1-A3 影子模式上線跑两周对照
+    → ④ 用评价管道数据决定 A4 是修阈值还是降级。
+  </div>
+</section>
+
+<!-- ================= 附录 ================= -->
+<section class="card">
+  <h2 class="text-lg font-bold mb-2">📎 口径、限制与复现</h2>
+  <ul class="text-sm leading-6 list-disc pl-5 space-y-1">
+    <li>数据：线上版本 ver_20260819_091435 全部 200 个日切片，<span id="app-rows"></span> 股票-日、<span id="app-stocks"></span> 只股票；前复权价格锚定同一发布批次，跨切片收益可直接计算。</li>
+    <li>超额收益基准 = 全市场等权组合（含命中股自身）；对照组 = 全体股票-日随机抽样 15 万行。</li>
+    <li><b>全部为样本内结论</b>：200 天单窗口、一次牛熊转换、无交易成本假设。方向可信，数值不能外推，需滚动样本外验证。</li>
+    <li>Rank-IC = 每日截面 Spearman 秩相关（样本 ≥300 只），190 天平均；ICIR = IC 均值 / IC 标准差。</li>
+    <li>复现：<code class="text-xs bg-slate-100 px-1 rounded">analysis/factor_deep_analysis.py</code>（全景）、<code class="text-xs bg-slate-100 px-1 rounded">analysis/factor_control_ic.py</code>（对照 + IC）、<code class="text-xs bg-slate-100 px-1 rounded">analysis/export_report_data.py + build_report.py</code>（本报告）。</li>
+    <li>报告日期 2026-08-20 · 由 200 日线上数据程序化生成，图表数字与数据完全一致。</li>
+  </ul>
+</section>
+
+</div>
+
+<script>
+const DATA = /*__REPORT_DATA__*/;
+
+const FN = DATA.fnames;
+const FORDER = ["hl_5r","5r","high_all","high_250","hl_amo","amo","ma377_support","ma250_support","label"];
+const fmt = v => (v>=0?"+":"") + v.toFixed(2) + "%";
+
+// ---------- 头部/导航 ----------
+document.getElementById("meta-line").textContent =
+  `数据区间 ${DATA.meta.days[0]} ~ ${DATA.meta.days[1]}（${DATA.meta.n_days} 个交易日）· ${(DATA.meta.n_rows/10000).toFixed(1)} 万股票-日 · ${DATA.meta.n_stocks} 只股票 · 数据版本 ${DATA.meta.version} · 报告日期 ${DATA.meta.generated}`;
+const secs = [["sec1","1️⃣ 因子全景"],["sec2","2️⃣ 前向收益"],["sec3","3️⃣ 环境依赖"],["sec4","4️⃣ 信号IC"],["sec5","5️⃣ 行业板块"],["sec6","6️⃣ 迭代建议"]];
+document.getElementById("nav").innerHTML = secs.map(([id,t])=>`<a href="#${id}" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-blue-100">${t}</a>`).join("");
+
+document.getElementById("tldr-ha").textContent = fmt(DATA.fwd["10"].high_all.mean);
+document.getElementById("tldr-lab").textContent = fmt(DATA.fwd["10"].label.mean);
+document.getElementById("tldr-hlamo").textContent = fmt(DATA.fwd["10"].hl_amo.mean);
+document.getElementById("app-rows").textContent = (DATA.meta.n_rows/10000).toFixed(1) + " 万";
+document.getElementById("app-stocks").textContent = DATA.meta.n_stocks;
+
+// ---------- 全景表 ----------
+{
+  const rows = [["因子","200日总命中","日均","单日max","波动CV","类型（连续命中）","中位段长","最长段"]];
+  for (const k of FORDER.slice(0,8)) {
+    const d = DATA.daily[k];
+    const mean = d.reduce((a,b)=>a+b,0)/d.length;
+    const sd = Math.sqrt(d.reduce((a,b)=>a+(b-mean)**2,0)/d.length);
+    const p = DATA.persist[k];
+    const type = (p.med>=3?"状态型":"事件型");
+    rows.push([FN[k], DATA.totals[k].toLocaleString(), mean.toFixed(0), Math.max(...d), (sd/mean*100).toFixed(0)+"%", type, p.med, p.max]);
+  }
+  document.getElementById("tbl-totals").innerHTML = rows.map(r=>`<tr>${r.map((c,i)=>i===0?`<td class="font-semibold">${c}</td>`:`<td>${c}</td>`).join("")}</tr>`).join("");
+}
+
+// ---------- 图1 每日命中时序 ----------
+{
+  const el = document.getElementById("chart-daily");
+  const c = echarts.init(el);
+  const colors = {"label":"#94a3b8","hl_5r":"#ef4444","5r":"#f97316","high_all":"#059669","high_250":"#10b981","hl_amo":"#dc2626","amo":"#f59e0b","ma377_support":"#3b82f6","ma250_support":"#6366f1"};
+  const series = Object.keys(colors).map(k=>({
+    name: k==="label"?"LABEL 均线多头（市场状态代理）":FN[k], type:"line", showSymbol:false,
+    smooth:.3, lineWidth:1.4, itemStyle:{color:colors[k]},
+    data: DATA.daily[k], emphasis:{focus:"series"}
+  }));
+  c.setOption({
+    color:Object.values(colors),
+    tooltip:{trigger:"axis", backgroundColor:"#fff", borderColor:"#e2e8f0", textStyle:{fontSize:11}},
+    legend:{type:"scroll", bottom:0, textStyle:{fontSize:10}},
+    grid:{left:44,right:16,top:14,bottom:44},
+    dataZoom:[{type:"inside"},{type:"slider",height:16,bottom:20}],
+    xAxis:{type:"category",data:DATA.daily.dates,axisLabel:{fontSize:9,interval:19,rotate:45}},
+    yAxis:{type:"value",name:"命中数",splitLine:{lineStyle:{color:"#f1f5f9"}}},
+    series
+  });
+  new ResizeObserver(()=>c.resize()).observe(el);
+}
+
+// ---------- 图2 T+10 才额条形图 ----------
+{
+  const el = document.getElementById("chart-fwd10");
+  const c = echarts.init(el);
+  const keys = FORDER.slice(0,8).concat(["label"]);
+  const names = keys.map(k=>FN[k]);
+  const med = keys.map(k=>DATA.fwd["10"][k].med);
+  const mean = keys.map(k=>DATA.fwd["10"][k].mean);
+  c.setOption({
+    tooltip:{trigger:"axis",axisPointer:{type:"shadow"},valueFormatter:v=>fmt(v)},
+    legend:{bottom:0,textStyle:{fontSize:11}},
+    grid:{left:110,right:30,top:14,bottom:36},
+    xAxis:{type:"value",axisLabel:{formatter:v=>v+"%"},splitLine:{lineStyle:{color:"#f1f5f9"}}},
+    yAxis:{type:"category",data:names,inverse:true,axisLabel:{fontSize:11}},
+    series:[
+      {name:"超额中位数",type:"bar",data:med,itemStyle:{color:"#93c5fd",borderRadius:[0,3,3,0]},
+       markLine:{symbol:"none",lineStyle:{color:"#60a5fa",type:"dashed"},label:{formatter:"对照中位 {c}%"},data:[{xAxis:DATA.fwd["10"]._control.med}]}},
+      {name:"超额均值",type:"bar",data:mean,itemStyle:{color:(p)=>p.value>=0.09?"#059669":"#ef4444",borderRadius:[0,3,3,0]},
+       markLine:{symbol:"none",lineStyle:{color:"#34d399",type:"dashed"},label:{formatter:"对照均值 {c}%"},data:[{xAxis:DATA.fwd["10"]._control.mean}]}}
+    ]
+  });
+  new ResizeObserver(()=>c.resize()).observe(el);
+}
+
+// ---------- 图3 持有期曲线 ----------
+{
+  const el = document.getElementById("chart-horizon");
+  const c = echarts.init(el);
+  const sel = ["high_all","label","hl_5r","hl_amo","ma250_support"];
+  const colors=["#059669","#0ea5e9","#ef4444","#dc2626","#6366f1"];
+  const series = sel.map((k,i)=>({name:FN[k],type:"line",data:[1,5,10,20].map(h=>DATA.fwd[String(h)][k].mean),itemStyle:{color:colors[i]},lineStyle:{width:2}}));
+  series.push({name:"对照（全市场）",type:"line",data:[1,5,10,20].map(h=>DATA.fwd[String(h)]._control.mean),itemStyle:{color:"#94a3b8"},lineStyle:{type:"dashed",width:1.5}});
+  c.setOption({
+    tooltip:{trigger:"axis",valueFormatter:v=>fmt(v)},
+    legend:{bottom:0,textStyle:{fontSize:10}},
+    grid:{left:44,right:16,top:14,bottom:52},
+    xAxis:{type:"category",data:["T+1","T+5","T+10","T+20"]},
+    yAxis:{type:"value",axisLabel:{formatter:v=>v+"%"},splitLine:{lineStyle:{color:"#f1f5f9"}}},
+    series
+  });
+  new ResizeObserver(()=>c.resize()).observe(el);
+}
+
+// ---------- 图4 半场对比 ----------
+{
+  const el = document.getElementById("chart-halves");
+  const c = echarts.init(el);
+  const keys = FORDER.slice(0,8);
+  c.setOption({
+    tooltip:{trigger:"axis",axisPointer:{type:"shadow"},valueFormatter:v=>fmt(v)},
+    legend:{bottom:0,textStyle:{fontSize:11}},
+    grid:{left:44,right:16,top:14,bottom:52},
+    xAxis:{type:"category",data:keys.map(k=>FN[k].split(" ")[0]),axisLabel:{fontSize:9,rotate:38}},
+    yAxis:{type:"value",axisLabel:{formatter:v=>v+"%"},splitLine:{lineStyle:{color:"#f1f5f9"}}},
+    series:[
+      {name:"前半场（至 2026-03-24）",type:"bar",data:keys.map(k=>DATA.halves[k][0]),itemStyle:{color:"#93c5fd"}},
+      {name:"后半场（2026-03-25 起）",type:"bar",data:keys.map(k=>DATA.halves[k][1]),itemStyle:{color:"#6366f1"}}
+    ]
+  });
+  new ResizeObserver(()=>c.resize()).observe(el);
+}
+
+// ---------- 图5 HIGH_ALL 分布 ----------
+{
+  const el = document.getElementById("chart-dist");
+  const c = echarts.init(el);
+  const d = DATA.high_all_dist;
+  c.setOption({
+    tooltip:{trigger:"axis",valueFormatter:v=>fmt(v)},
+    grid:{left:50,right:16,top:14,bottom:26},
+    xAxis:{type:"category",data:d.pcts.map(p=>"P"+p)},
+    yAxis:{type:"value",axisLabel:{formatter:v=>v+"%"},splitLine:{lineStyle:{color:"#f1f5f9"}}},
+    series:[{type:"bar",data:d.vals.map((v,i)=>({value:v,itemStyle:{color:v>=0?"#059669":"#ef4444"}})),
+      markLine:{symbol:"none",lineStyle:{color:"#34d399",type:"dashed"},data:[{yAxis:0}]},barWidth:"60%"}]
+  });
+  new ResizeObserver(()=>c.resize()).observe(el);
+}
+
+// ---------- 图6 环境分层 ----------
+{
+  const el = document.getElementById("chart-regime");
+  const c = echarts.init(el);
+  const keys = FORDER.slice(0,8).concat(["label"]);
+  c.setOption({
+    tooltip:{trigger:"axis",axisPointer:{type:"shadow"},valueFormatter:v=>fmt(v)},
+    legend:{bottom:0,textStyle:{fontSize:11}},
+    grid:{left:44,right:16,top:14,bottom:52},
+    xAxis:{type:"category",data:keys.map(k=>FN[k].split(" ")[0]),axisLabel:{fontSize:9,rotate:38}},
+    yAxis:{type:"value",axisLabel:{formatter:v=>v+"%"},splitLine:{lineStyle:{color:"#f1f5f9"}}},
+    series:[
+      {name:"强市日（宽度最高1/3）",type:"bar",data:keys.map(k=>DATA.regime[k][0]),itemStyle:{color:"#f59e0b"}},
+      {name:"弱市日（宽度最低1/3）",type:"bar",data:keys.map(k=>DATA.regime[k][1]),itemStyle:{color:"#64748b"}}
+    ]
+  });
+  new ResizeObserver(()=>c.resize()).observe(el);
+}
+
+// ---------- 图7 IC ----------
+{
+  const el = document.getElementById("chart-ic");
+  const c = echarts.init(el);
+  const entries = Object.entries(DATA.ic).sort((a,b)=>Math.abs(b[1].ic)-Math.abs(a[1].ic));
+  c.setOption({
+    tooltip:{trigger:"axis",axisPointer:{type:"shadow"},
+      formatter:ps=>{const d=DATA.ic[ps[0].name];return `${d.label}<br/>IC 均值 <b>${d.ic}</b><br/>ICIR <b>${d.icir}</b><br/>IC&gt;0 占比 ${d.pos_pct}%`;}},
+    grid:{left:110,right:60,top:14,bottom:26},
+    xAxis:{type:"value",axisLabel:{formatter:v=>v.toFixed(2)},splitLine:{lineStyle:{color:"#f1f5f9"}}},
+    yAxis:{type:"category",data:entries.map(([k])=>k),inverse:true,axisLabel:{fontSize:11}},
+    series:[{type:"bar",barWidth:"55%",
+      data:entries.map(([k,v])=>({value:v.ic,itemStyle:{color:Math.abs(v.icir)>=0.15?(v.ic<0?"#4f46e5":"#059669"):"#cbd5e1"}})),
+      label:{show:true,position:"right",fontSize:10,formatter:p=>`ICIR ${DATA.ic[p.name].icir}`}}]
+  });
+  new ResizeObserver(()=>c.resize()).observe(el);
+}
+
+// ---------- 行业表 ----------
+{
+  const rows = ["<tr><th>因子</th><th>命中最集中的 5 个申万一级行业（占命中% / 基准% / 富集倍数）</th></tr>"];
+  const cmap = x => x>=1.8?"bg-red-100 text-red-700":x>=1.2?"bg-amber-100 text-amber-700":"bg-slate-100 text-slate-600";
+  for (const k of ["high_all","5r","hl_amo","amo","ma250_support","ma377_support"]) {
+    const chips = DATA.industry[k].map(i=>`<span class="chip ${cmap(i.x)}">${i.ind} ${i.pct}%（${i.x}×）</span>`).join(" ");
+    rows.push(`<tr><td class="font-semibold whitespace-nowrap">${FN[k]}</td><td class="leading-7">${chips}</td></tr>`);
+  }
+  document.getElementById("tbl-ind").innerHTML = rows.join("");
+}
+</script>
+</body>
+</html>
