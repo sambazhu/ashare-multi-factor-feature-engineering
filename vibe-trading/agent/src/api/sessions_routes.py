@@ -975,7 +975,7 @@ def register_sessions_routes(app: FastAPI) -> None:
             full_reasoning = []
             full_content = []
             tool_trails = []
-            upstream_url = "http://127.0.0.1:62202/0d574b39/sync/v1/chat/completions"
+            upstream_url = f"{primary_base_url.rstrip('/')}/chat/completions"
             headers = {
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {primary_api_key}",
